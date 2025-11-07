@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTW Hilfsfrist Dashboard V7 - Hamburger Feuerwehr</title>
+
+    <!-- ArcGIS JavaScript API CSS -->
+    <link rel="stylesheet" href="https://js.arcgis.com/4.33/esri/themes/light/main.css">
+
+    <!-- Importmap für externe Module -->
+    <script type="importmap">
+    {
+        "imports": {
+            "chart.js": "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/+esm"
+        }
+    }
+    </script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Message Toast -->
+    <div class="message-toast" id="messageToast"></div>
+
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">
+                <div class="header-icon">🚑</div>
+                <div class="header-text">
+                    <h1>RTW Hilfsfrist-Dashboard V7</h1>
+                    <p>Hamburger Feuerwehr - Echtzeit-Monitoring (TypeScript Edition)</p>
+                </div>
+            </div>
+            <div class="header-status">
+                <div class="status-item">
+                    <div class="status-indicator active"></div>
+                    <span class="status-text">Live-Daten</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-text" id="lastUpdate">Lädt...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Panel -->
+        <div class="filter-panel">
+            <div class="filter-header">
+                <h2>🔍 Filter & Einstellungen</h2>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="refreshBtn">
+                        🔄 Aktualisieren
+                    </button>
+                    <button class="btn btn-secondary" id="exportBtn">
+                        📥 CSV Export
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-controls">
+                <div class="form-group">
+                    <label for="timeFilter">Zeitraum</label>
+                    <select id="timeFilter">
+                        <!-- Wird dynamisch gefüllt -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- RTW Picker Section -->
+            <div class="rtw-picker-section">
+                <div class="rtw-picker-header" id="rtwPickerToggle">
+                    <h3>🚑 RTW-Auswahl <span id="rtwSelectedCount">(Alle ausgewählt)</span></h3>
+                    <span class="rtw-picker-toggle">▼</span>
+                </div>
+                <div class="rtw-picker-content" id="rtwPickerContent">
+                    <div class="rtw-picker-actions">
+                        <button class="rtw-picker-btn select-all" id="selectAllRtwBtn">Alle auswählen</button>
+                        <button class="rtw-picker-btn deselect-all" id="deselectAllRtwBtn">Alle abwählen</button>
+                    </div>
+                    <div class="rtw-checkbox-grid" id="rtwCheckboxGrid">
+                        <!-- Wird dynamisch gefüllt -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <!-- Gesamteinsätze KPI -->
+            <div class="kpi-card info">
+                <div class="kpi-header">
+                    <div>
+                        <div class="kpi-title">Gesamteinsätze</div>
+                    </div>
+                    <div class="kpi-icon">📋</div>
+                </div>
+                <div class="kpi-value-large">
+                    <span id="totalCount">0</span>
+                </div>
+                <div class="kpi-breakdown">
+                    <div class="kpi-breakdown-item">
+                        <div class="kpi-breakdown-label">✅ Hilfsfristrelevant</div>
+                        <div class="kpi-breakdown-value">
+                            <span class="kpi-breakdown-number" id="relevantCount">0</span>
+                            <span class="kpi-breakdown-percentage" id="relevantPercentage">(0%)</span>
+                        </div>
+                    </div>
+                    <div class="kpi-breakdown-item">
+                        <div class="kpi-breakdown-label">🚫 Nicht relevant</div>
+                        <div class="kpi-breakdown-value">
+                            <span class="kpi-breakdown-number" id="notRelevantCount">0</span>
+                            <span class="kpi-breakdown-percentage" id="notRelevantPercentage">(0%)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ausrückezeit KPI -->
+            <div class="kpi-card success">
+                <div class="kpi-header">
+                    <div>
+                        <div class="kpi-title">Ausrückezeit</div>
+                        <div class="kpi-label">≤ 90 Sekunden</div>
+                    </div>
+                    <div class="kpi-icon">⏱️</div>
+                </div>
+                <div class="kpi-value">
+                    <span id="responsePercentage">0</span>%
+                </div>
+                <div class="kpi-label">
+                    <span id="responseAchieved">0</span> von <span id="responseTotal">0</span> erreicht
+                </div>
+            </div>
+
+            <!-- Anfahrtszeit KPI -->
+            <div class="kpi-card warning">
+                <div class="kpi-header">
+                    <div>
+                        <div class="kpi-title">Anfahrtszeit</div>
+                        <div class="kpi-label">≤ 8 Minuten</div>
+                    </div>
+                    <div class="kpi-icon">🚗</div>
+                </div>
+                <div class="kpi-value">
+                    <span id="travelPercentage">0</span>%
+                </div>
+                <div class="kpi-label">
+                    <span id="travelAchieved">0</span> von <span id="travelTotal">0</span> erreicht
+                </div>
+            </div>
+
+            <!-- Hilfsfrist KPI -->
+            <div class="kpi-card">
+                <div class="kpi-header">
+                    <div>
+                        <div class="kpi-title">Hilfsfrist</div>
+                        <div class="kpi-label">Gesamt</div>
+                    </div>
+                    <div class="kpi-icon">🎯</div>
+                </div>
+                <div class="kpi-value">
+                    <span id="hilfsfristPercentage">0</span>%
+                </div>
+                <div class="kpi-label">
+                    <span id="hilfsfristAchieved">0</span> von <span id="hilfsfristTotal">0</span> erreicht
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <!-- Line Chart -->
+            <div class="chart-card">
+                <div class="chart-container">
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bar Chart -->
+            <div class="chart-card">
+                <div class="chart-container">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Pie Chart -->
+            <div class="chart-card">
+                <div class="chart-container">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-card">
+            <div class="table-header">
+                <h2>📊 Detaillierte Einsatzliste</h2>
+                <div class="table-info">
+                    Anzahl: <strong id="tableRecordCount">0</strong>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>RTW</th>
+                            <th>Einsatztyp</th>
+                            <th>Relevanz</th>
+                            <th>Alarmzeit</th>
+                            <th>Ausrückezeit</th>
+                            <th>Status</th>
+                            <th>Anfahrtszeit</th>
+                            <th>Status</th>
+                            <th>Hilfsfrist</th>
+                            <th>Event ID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="10" class="empty-state">
+                                <div class="empty-state-icon">⏳</div>
+                                <div>Lade Daten...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Entry Point -->
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
