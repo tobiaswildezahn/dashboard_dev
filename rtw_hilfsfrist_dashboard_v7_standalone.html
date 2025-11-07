@@ -836,6 +836,9 @@
                 <div class="kpi-label">
                     <span id="responseAchieved">0</span> von <span id="responseTotal">0</span> erreicht
                 </div>
+                <div class="kpi-label" style="margin-top: 6px; color: var(--gray-500); font-size: 11px;">
+                    📊 90% Perzentil: <strong id="response90Percentile" style="color: var(--gray-700);">N/A</strong>
+                </div>
             </div>
 
             <!-- Anfahrtszeit KPI -->
@@ -852,6 +855,9 @@
                 </div>
                 <div class="kpi-label">
                     <span id="travelAchieved">0</span> von <span id="travelTotal">0</span> erreicht
+                </div>
+                <div class="kpi-label" style="margin-top: 6px; color: var(--gray-500); font-size: 11px;">
+                    📊 90% Perzentil: <strong id="travel90Percentile" style="color: var(--gray-700);">N/A</strong>
                 </div>
             </div>
 
@@ -897,15 +903,25 @@
             </div>
         </div>
 
+        <!-- NEU: Tagesverlauf Heatmap -->
+        <div class="chart-card" style="grid-column: 1 / -1; margin-bottom: 16px;">
+            <div class="chart-container" style="height: 280px;">
+                <canvas id="heatmapChart"></canvas>
+            </div>
+        </div>
+
         <!-- Data Table -->
         <div class="table-card">
-            <div class="table-header">
+            <div class="table-header" style="cursor: pointer;" id="tableToggleHeader">
                 <h2>📊 Detaillierte Einsatzliste</h2>
-                <div class="table-info">
-                    Anzahl: <strong id="tableRecordCount">0</strong>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="table-info">
+                        Anzahl: <strong id="tableRecordCount">0</strong>
+                    </div>
+                    <span class="rtw-picker-toggle expanded" id="tableToggleIcon">▼</span>
                 </div>
             </div>
-            <div class="table-container">
+            <div class="table-container" id="tableContent">
                 <table>
                     <thead>
                         <tr>
@@ -978,6 +994,7 @@
             state.lineChart = null;
             state.barChart = null;
             state.pieChart = null;
+            state.heatmapChart = null;
 
             // ============================================================================
             // HELPER FUNCTIONS
@@ -1313,6 +1330,14 @@
             // KPI CALCULATION & UPDATE
             // ============================================================================
 
+            // Hilfsfunktion: Berechnet das Perzentil
+            function calculatePercentile(values, percentile) {
+                if (values.length === 0) return null;
+                const sorted = [...values].sort((a, b) => a - b);
+                const index = Math.ceil((percentile / 100) * sorted.length) - 1;
+                return sorted[Math.max(0, index)];
+            }
+
             function calculateKPIs(data) {
                 const total = data.length;
                 const relevantData = data.filter(d => d.isHilfsfristRelevant);
@@ -1336,6 +1361,13 @@
                     ? (hilfsfristAchieved / hilfsfristValid.length * 100)
                     : 0;
 
+                // NEU: 90% Perzentil Berechnung
+                const responseTimes = responseValid.map(d => d.responseTime).filter(t => t !== null);
+                const travelTimes = travelValid.map(d => d.travelTime).filter(t => t !== null);
+
+                const response90Percentile = calculatePercentile(responseTimes, 90);
+                const travel90Percentile = calculatePercentile(travelTimes, 90);
+
                 return {
                     total,
                     relevantCount: relevantData.length,
@@ -1346,10 +1378,12 @@
                     responseAchieved,
                     responseTotal: responseValid.length,
                     responsePercentage,
+                    response90Percentile,
 
                     travelAchieved,
                     travelTotal: travelValid.length,
                     travelPercentage,
+                    travel90Percentile,
 
                     hilfsfristAchieved,
                     hilfsfristTotal: hilfsfristValid.length,
@@ -1370,9 +1404,25 @@
                 document.getElementById('responseAchieved').textContent = kpis.responseAchieved;
                 document.getElementById('responseTotal').textContent = kpis.responseTotal;
 
+                // NEU: 90% Perzentil für Ausrückezeit
+                const response90El = document.getElementById('response90Percentile');
+                if (response90El) {
+                    response90El.textContent = kpis.response90Percentile !== null
+                        ? Math.round(kpis.response90Percentile) + 's'
+                        : 'N/A';
+                }
+
                 document.getElementById('travelPercentage').textContent = Math.round(kpis.travelPercentage);
                 document.getElementById('travelAchieved').textContent = kpis.travelAchieved;
                 document.getElementById('travelTotal').textContent = kpis.travelTotal;
+
+                // NEU: 90% Perzentil für Anfahrtszeit
+                const travel90El = document.getElementById('travel90Percentile');
+                if (travel90El) {
+                    travel90El.textContent = kpis.travel90Percentile !== null
+                        ? Math.round(kpis.travel90Percentile) + 's'
+                        : 'N/A';
+                }
 
                 document.getElementById('hilfsfristPercentage').textContent = Math.round(kpis.hilfsfristPercentage);
                 document.getElementById('hilfsfristAchieved').textContent = kpis.hilfsfristAchieved;
@@ -1387,6 +1437,7 @@
                 updateLineChart(data);
                 updateBarChart(data);
                 updatePieChart(data);
+                updateHeatmap(data);
             }
 
             // ============================================================================
@@ -1656,6 +1707,13 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        onClick: (event, elements) => {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const label = allLabels[index];
+                                showMessage(`📊 Klick auf: ${label} - Filter-Funktion geplant`, 'info');
+                            }
+                        },
                         plugins: {
                             legend: {
                                 position: 'top'
@@ -1667,7 +1725,7 @@
                             },
                             subtitle: {
                                 display: true,
-                                text: 'Nur hilfsfristrelevante Einsätze | 10s bzw. 1min Schritte',
+                                text: 'Nur hilfsfristrelevante Einsätze | 10s bzw. 1min Schritte | Klickbar',
                                 font: { size: 11 },
                                 color: '#666'
                             }
@@ -1754,6 +1812,125 @@
                                         const percentage = total > 0 ? (context.parsed / total * 100).toFixed(1) : 0;
                                         return `${context.label}: ${context.parsed} (${percentage}%)`;
                                     }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // ============================================================================
+            // HEATMAP - Tagesverlauf Performance
+            // ============================================================================
+
+            function updateHeatmap(data) {
+                const relevantData = data.filter(d => d.isHilfsfristRelevant && d.time_alarm);
+
+                // Aggregiere Daten nach Stunden (0-23)
+                const hourlyData = Array(24).fill(0).map(() => ({
+                    total: 0,
+                    achieved: 0
+                }));
+
+                relevantData.forEach(item => {
+                    const alarmDate = new Date(item.time_alarm);
+                    const hour = alarmDate.getHours();
+
+                    if (item.hilfsfristAchieved !== null) {
+                        hourlyData[hour].total++;
+                        if (item.hilfsfristAchieved) {
+                            hourlyData[hour].achieved++;
+                        }
+                    }
+                });
+
+                // Berechne Erfüllungsgrad pro Stunde
+                const percentages = hourlyData.map(h =>
+                    h.total > 0 ? (h.achieved / h.total * 100).toFixed(1) : null
+                );
+
+                const labels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
+
+                // Farb-Mapping basierend auf Erfüllungsgrad
+                const backgroundColors = percentages.map(p => {
+                    if (p === null) return 'rgba(200, 200, 200, 0.3)';
+                    if (p >= 90) return 'rgba(16, 185, 129, 0.8)'; // Grün
+                    if (p >= 75) return 'rgba(245, 158, 11, 0.8)'; // Orange
+                    return 'rgba(239, 68, 68, 0.8)'; // Rot
+                });
+
+                if (state.heatmapChart) {
+                    state.heatmapChart.destroy();
+                }
+
+                const ctx = document.getElementById('heatmapChart').getContext('2d');
+                state.heatmapChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Hilfsfrist-Erfüllung (%)',
+                            data: percentages.map(p => p !== null ? parseFloat(p) : 0),
+                            backgroundColor: backgroundColors,
+                            borderColor: backgroundColors.map(c => c.replace('0.8', '1')),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: '🕐 Tagesverlauf: Hilfsfrist-Erfüllung pro Stunde',
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            subtitle: {
+                                display: true,
+                                text: 'Grün: ≥90% | Orange: 75-90% | Rot: <75% | Grau: Keine Daten',
+                                font: { size: 11 },
+                                color: '#666'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const hour = context.label;
+                                        const hourIndex = parseInt(hour.split(':')[0]);
+                                        const data = hourlyData[hourIndex];
+                                        if (data.total === 0) return 'Keine Einsätze';
+                                        const percentage = (data.achieved / data.total * 100).toFixed(1);
+                                        return [
+                                            `Erfüllungsgrad: ${percentage}%`,
+                                            `Erreicht: ${data.achieved}/${data.total}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    font: { size: 10 },
+                                    maxRotation: 0,
+                                    minRotation: 0
+                                },
+                                grid: {
+                                    display: false
                                 }
                             }
                         }
@@ -1944,6 +2121,23 @@
                         console.warn('Fehler beim Laden der Chart-Visibility', e);
                     }
                 }
+
+                // NEU: Toggle-Funktion für Tabelle
+                const tableToggleHeader = document.getElementById('tableToggleHeader');
+                const tableToggleIcon = document.getElementById('tableToggleIcon');
+                const tableContent = document.getElementById('tableContent');
+
+                tableToggleHeader.addEventListener('click', () => {
+                    if (tableContent.style.display === 'none') {
+                        tableContent.style.display = 'block';
+                        tableToggleIcon.classList.add('expanded');
+                        tableToggleIcon.textContent = '▼';
+                    } else {
+                        tableContent.style.display = 'none';
+                        tableToggleIcon.classList.remove('expanded');
+                        tableToggleIcon.textContent = '▶';
+                    }
+                });
 
                 await fetchData();
                 startAutoRefresh();
