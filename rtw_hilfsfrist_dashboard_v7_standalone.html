@@ -388,6 +388,63 @@
             border-left-width: 4px;
         }
 
+        /* NEU: Ampelschema für KPI-Performance */
+        .kpi-card.kpi-status-green {
+            border-left-color: var(--success-color);
+            background: linear-gradient(to right, rgba(16, 185, 129, 0.03), white);
+        }
+
+        .kpi-card.kpi-status-yellow {
+            border-left-color: var(--warning-color);
+            background: linear-gradient(to right, rgba(245, 158, 11, 0.03), white);
+        }
+
+        .kpi-card.kpi-status-red {
+            border-left-color: var(--danger-color);
+            background: linear-gradient(to right, rgba(239, 68, 68, 0.03), white);
+        }
+
+        .kpi-status-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 24px;
+            animation: pulse-slow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .kpi-threshold-info {
+            margin-top: 8px;
+            padding: 6px 8px;
+            background: var(--gray-50);
+            border-radius: 4px;
+            font-size: 10px;
+            color: var(--gray-600);
+            border-left: 2px solid var(--gray-300);
+        }
+
+        .kpi-threshold-info.threshold-green {
+            background: rgba(16, 185, 129, 0.05);
+            border-left-color: var(--success-color);
+            color: #059669;
+        }
+
+        .kpi-threshold-info.threshold-yellow {
+            background: rgba(245, 158, 11, 0.05);
+            border-left-color: var(--warning-color);
+            color: #d97706;
+        }
+
+        .kpi-threshold-info.threshold-red {
+            background: rgba(239, 68, 68, 0.05);
+            border-left-color: var(--danger-color);
+            color: #dc2626;
+        }
+
         .kpi-header {
             display: flex;
             justify-content: space-between;
@@ -822,7 +879,8 @@
             </div>
 
             <!-- Ausrückezeit KPI -->
-            <div class="kpi-card success">
+            <div class="kpi-card success" id="responseCard">
+                <span class="kpi-status-badge" id="responseStatusBadge"></span>
                 <div class="kpi-header">
                     <div>
                         <div class="kpi-title">Ausrückezeit</div>
@@ -839,10 +897,14 @@
                 <div class="kpi-label" style="margin-top: 6px; color: var(--gray-500); font-size: 11px;">
                     📊 90% Perzentil: <strong id="response90Percentile" style="color: var(--gray-700);">N/A</strong>
                 </div>
+                <div class="kpi-threshold-info" id="responseThresholdInfo">
+                    ⚫ Status wird berechnet...
+                </div>
             </div>
 
             <!-- Anfahrtszeit KPI -->
-            <div class="kpi-card warning">
+            <div class="kpi-card warning" id="travelCard">
+                <span class="kpi-status-badge" id="travelStatusBadge"></span>
                 <div class="kpi-header">
                     <div>
                         <div class="kpi-title">Anfahrtszeit</div>
@@ -859,10 +921,14 @@
                 <div class="kpi-label" style="margin-top: 6px; color: var(--gray-500); font-size: 11px;">
                     📊 90% Perzentil: <strong id="travel90Percentile" style="color: var(--gray-700);">N/A</strong>
                 </div>
+                <div class="kpi-threshold-info" id="travelThresholdInfo">
+                    ⚫ Status wird berechnet...
+                </div>
             </div>
 
             <!-- Hilfsfrist KPI -->
-            <div class="kpi-card">
+            <div class="kpi-card" id="hilfsfristCard">
+                <span class="kpi-status-badge" id="hilfsfristStatusBadge"></span>
                 <div class="kpi-header">
                     <div>
                         <div class="kpi-title">Hilfsfrist</div>
@@ -875,6 +941,9 @@
                 </div>
                 <div class="kpi-label">
                     <span id="hilfsfristAchieved">0</span> von <span id="hilfsfristTotal">0</span> erreicht
+                </div>
+                <div class="kpi-threshold-info" id="hilfsfristThresholdInfo">
+                    ⚫ Status wird berechnet...
                 </div>
             </div>
         </div>
@@ -1391,6 +1460,35 @@
                 };
             }
 
+            // NEU: Hilfsfunktion für Ampelschema-Status
+            function getThresholdStatus(percentage) {
+                if (percentage >= 90) return { status: 'green', emoji: '🟢', text: 'Exzellent (≥90%)' };
+                if (percentage >= 75) return { status: 'yellow', emoji: '🟡', text: 'Akzeptabel (75-89%)' };
+                return { status: 'red', emoji: '🔴', text: 'Kritisch (<75%)' };
+            }
+
+            function updateKPIStatus(cardId, badgeId, infoId, percentage) {
+                const card = document.getElementById(cardId);
+                const badge = document.getElementById(badgeId);
+                const info = document.getElementById(infoId);
+
+                if (!card || !badge || !info) return;
+
+                const status = getThresholdStatus(percentage);
+
+                // Remove all status classes
+                card.classList.remove('kpi-status-green', 'kpi-status-yellow', 'kpi-status-red');
+                info.classList.remove('threshold-green', 'threshold-yellow', 'threshold-red');
+
+                // Add new status classes
+                card.classList.add(`kpi-status-${status.status}`);
+                info.classList.add(`threshold-${status.status}`);
+
+                // Update badge and info text
+                badge.textContent = status.emoji;
+                info.textContent = `${status.emoji} ${status.text}`;
+            }
+
             function updateKPIs(data) {
                 const kpis = calculateKPIs(data);
 
@@ -1412,6 +1510,9 @@
                         : 'N/A';
                 }
 
+                // NEU: Ampelschema für Ausrückezeit
+                updateKPIStatus('responseCard', 'responseStatusBadge', 'responseThresholdInfo', kpis.responsePercentage);
+
                 document.getElementById('travelPercentage').textContent = Math.round(kpis.travelPercentage);
                 document.getElementById('travelAchieved').textContent = kpis.travelAchieved;
                 document.getElementById('travelTotal').textContent = kpis.travelTotal;
@@ -1424,9 +1525,15 @@
                         : 'N/A';
                 }
 
+                // NEU: Ampelschema für Anfahrtszeit
+                updateKPIStatus('travelCard', 'travelStatusBadge', 'travelThresholdInfo', kpis.travelPercentage);
+
                 document.getElementById('hilfsfristPercentage').textContent = Math.round(kpis.hilfsfristPercentage);
                 document.getElementById('hilfsfristAchieved').textContent = kpis.hilfsfristAchieved;
                 document.getElementById('hilfsfristTotal').textContent = kpis.hilfsfristTotal;
+
+                // NEU: Ampelschema für Hilfsfrist
+                updateKPIStatus('hilfsfristCard', 'hilfsfristStatusBadge', 'hilfsfristThresholdInfo', kpis.hilfsfristPercentage);
             }
 
             // ============================================================================
