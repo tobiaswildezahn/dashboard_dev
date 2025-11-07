@@ -1048,14 +1048,14 @@
                 return { startTime, endTime };
             }
 
-            // Hilfsfunktion: Konvertiert Date-Objekt zu SQL TIMESTAMP Format
+            // Hilfsfunktion: Konvertiert Date-Objekt zu SQL TIMESTAMP Format (UTC)
             function formatDateToSQL(date) {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const hours = String(date.getHours()).padStart(2, '0');
-                const minutes = String(date.getMinutes()).padStart(2, '0');
-                const seconds = String(date.getSeconds()).padStart(2, '0');
+                const year = date.getUTCFullYear();
+                const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(date.getUTCDate()).padStart(2, '0');
+                const hours = String(date.getUTCHours()).padStart(2, '0');
+                const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+                const seconds = String(date.getUTCSeconds()).padStart(2, '0');
                 return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
             }
 
@@ -1231,8 +1231,14 @@
                         const startTimestamp = formatDateToSQL(startTime);
                         const endTimestamp = formatDateToSQL(endTime);
 
-                        whereClause = `nameresourcetype = '${CONFIG.resourceType}' AND time_alarm >= TIMESTAMP '${startTimestamp}' AND time_alarm <= TIMESTAMP '${endTimestamp}'`;
-                        eventWhereClause = `alarmtime >= TIMESTAMP '${startTimestamp}' AND alarmtime <= TIMESTAMP '${endTimestamp}'`;
+                        console.log('🕐 Schicht-Filter aktiv:');
+                        console.log('  Start:', startTimestamp, '(lokale Zeit:', startTime.toLocaleString('de-DE'), ')');
+                        console.log('  Ende:', endTimestamp, '(lokale Zeit:', endTime.toLocaleString('de-DE'), ')');
+
+                        whereClause = `nameresourcetype = '${CONFIG.resourceType}' AND time_alarm >= DATE '${startTimestamp}' AND time_alarm < DATE '${endTimestamp}'`;
+                        eventWhereClause = `alarmtime >= DATE '${startTimestamp}' AND alarmtime < DATE '${endTimestamp}'`;
+
+                        console.log('  WHERE:', whereClause);
                     } else {
                         const hours = parseInt(timeFilterValue);
                         whereClause = `nameresourcetype = '${CONFIG.resourceType}' AND time_alarm > CURRENT_TIMESTAMP - INTERVAL '${hours}' HOUR`;
