@@ -32,7 +32,12 @@ async function openEventDetailsModal(eventId) {
     const modalTitle = document.querySelector('#eventDetailsModal .modal-title');
 
     // Schneller Lookup für Titel
-    const cachedItem = state.processedData.find(function(item) { return item.idevent === eventId; });
+    // WICHTIG: Beide zu Number konvertieren für sicheren Vergleich
+    // (Datenbank kann String oder Number liefern)
+    const eventIdNum = Number(eventId);
+    const cachedItem = state.processedData.find(function(item) {
+        return Number(item.idevent) === eventIdNum;
+    });
 
     // SICHERHEIT: escapeHtml() verhindert XSS-Angriffe
     const funkrufname = escapeHtml(cachedItem ? cachedItem.call_sign : null);
@@ -97,7 +102,12 @@ window.closeEventDetailsModal = closeEventDetailsModal;
  */
 async function fetchEventDetails(eventId) {
     // Daten aus dem Cache (state.processedData) holen
-    const cachedData = state.processedData.find(function(item) { return item.idevent === eventId; });
+    // WICHTIG: Beide zu Number konvertieren für sicheren Vergleich
+    // (Datenbank kann String oder Number liefern, parseInt liefert Number)
+    const eventIdNum = Number(eventId);
+    const cachedData = state.processedData.find(function(item) {
+        return Number(item.idevent) === eventIdNum;
+    });
 
     if (cachedData) {
         // Daten sind im Cache vorhanden

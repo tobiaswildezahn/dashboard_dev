@@ -135,8 +135,9 @@ function updateTable(data) {
 
         // SICHERHEIT: data-event-id statt onclick verhindert Code-Injection
         // Event-Delegation wird in init() registriert (sicherer als inline onclick)
+        // WICHTIG: Event-ID muss auch escaped werden (obwohl es eine Zahl sein sollte)
         const eventIdCell = item.idevent
-            ? '<a href="#" class="event-id-link" data-event-id="' + item.idevent + '">' + item.idevent + '</a>'
+            ? '<a href="#" class="event-id-link" data-event-id="' + escapeHtml(item.idevent) + '">' + escapeHtml(item.idevent) + '</a>'
             : 'N/A';
 
         return '<tr>' +
