@@ -148,7 +148,7 @@ function handleInsightAction(action) {
         const rtwCallSign = action.value;
 
         // Deselektiere alle RTWs
-        const checkboxes = document.querySelectorAll('.rtw-picker input[type="checkbox"]');
+        const checkboxes = document.querySelectorAll('#rtwCheckboxGrid input[type="checkbox"]');
         checkboxes.forEach(function(cb) {
             cb.checked = false;
         });
