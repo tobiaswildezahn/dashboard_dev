@@ -269,13 +269,20 @@ function detectRtwAnomalies(rtwCallSign, allData) {
 
     console.log('      🔍', rtwCallSign, '→', rtwData.length, 'Einsätze');
 
+    // DEBUG: Zeige ein Beispiel-Item um Struktur zu sehen
+    if (rtwData.length > 0) {
+        console.log('         DEBUG Beispiel-Item:', rtwData[0]);
+    }
+
     // Baseline: Alle RTWs kombiniert (zum Vergleich)
-    const allResponseTimes = allData.map(function(item) { return item.response_time; }).filter(function(t) { return t !== null; });
-    const allTravelTimes = allData.map(function(item) { return item.travel_time; }).filter(function(t) { return t !== null; });
+    const allResponseTimes = allData.map(function(item) { return item.response_time; }).filter(function(t) { return t !== null && !isNaN(t); });
+    const allTravelTimes = allData.map(function(item) { return item.travel_time; }).filter(function(t) { return t !== null && !isNaN(t); });
 
     // Daten für diesen RTW
-    const rtwResponseTimes = rtwData.map(function(item) { return item.response_time; }).filter(function(t) { return t !== null; });
-    const rtwTravelTimes = rtwData.map(function(item) { return item.travel_time; }).filter(function(t) { return t !== null; });
+    const rtwResponseTimes = rtwData.map(function(item) { return item.response_time; }).filter(function(t) { return t !== null && !isNaN(t); });
+    const rtwTravelTimes = rtwData.map(function(item) { return item.travel_time; }).filter(function(t) { return t !== null && !isNaN(t); });
+
+    console.log('         Response Times:', rtwResponseTimes.length, 'von', rtwData.length, '| Travel Times:', rtwTravelTimes.length, 'von', rtwData.length);
 
     // Durchschnitte berechnen
     const avgResponseTime = rtwResponseTimes.length > 0
