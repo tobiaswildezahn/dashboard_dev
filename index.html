@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="css/07-table.css">
     <link rel="stylesheet" href="css/08-modal.css">
     <link rel="stylesheet" href="css/09-responsive.css">
+    <link rel="stylesheet" href="css/10-insights.css">
 </head>
 <body>
     <!-- Loading Overlay -->
@@ -56,8 +57,8 @@
             <div class="header-title">
                 <div class="header-icon">🚑</div>
                 <div class="header-text">
-                    <h1>RTW Hilfsfrist-Dashboard V7</h1>
-                    <p>Hamburger Feuerwehr - Echtzeit-Monitoring (Modular Edition)</p>
+                    <h1>RTW Hilfsfrist-Dashboard V8 🧠</h1>
+                    <p>Hamburger Feuerwehr - Echtzeit-Monitoring mit Smart Insights</p>
                 </div>
             </div>
             <div class="header-status">
@@ -114,6 +115,25 @@
                     <div class="rtw-checkbox-grid" id="rtwCheckboxGrid">
                         <!-- Wird dynamisch gefüllt -->
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Smart Insights Panel -->
+        <div class="insights-panel" id="insightsPanel">
+            <div class="insights-header" onclick="toggleInsightsPanel()">
+                <div class="insights-header-left">
+                    <h2 class="insights-title">🧠 Smart Insights</h2>
+                    <span class="insights-count-badge" id="insightsCountBadge" style="display: none;">0</span>
+                </div>
+                <span class="insights-toggle-icon" id="insightsToggleIcon">▼</span>
+            </div>
+            <div class="insights-content" id="insightsContainer">
+                <!-- Wird dynamisch mit Insights gefüllt -->
+                <div class="insights-empty">
+                    <div class="insights-empty-icon">⏳</div>
+                    <div class="insights-empty-title">Analysiere Daten...</div>
+                    <div class="insights-empty-text">Smart Insights werden nach dem ersten Daten-Load angezeigt.</div>
                 </div>
             </div>
         </div>
@@ -304,6 +324,10 @@
     <script src="js/08-ui-modal.js"></script>
     <script src="js/09-ui-filters.js"></script>
     <script src="js/10-main.js"></script>
+    <script src="js/11-anomaly-detection.js"></script>
+    <script src="js/12-pattern-detection.js"></script>
+    <script src="js/13-insights.js"></script>
+    <script src="js/14-ui-insights.js"></script>
 
     <!-- AMD Wrapper for ArcGIS API -->
     <script>

@@ -17,13 +17,14 @@
  * - Zentrale Funktion die alle UI-Komponenten aktualisiert
  * - Wird nach jedem Datenladen oder Filter-Änderung aufgerufen
  * - Filtert Daten nach ausgewählten RTWs
- * - Aktualisiert KPIs, Charts und Tabelle
+ * - Aktualisiert KPIs, Charts, Tabelle und Smart Insights
  *
  * ABLAUF:
  * 1. Filtere Daten nach RTW-Auswahl
  * 2. Aktualisiere KPI-Karten
  * 3. Aktualisiere Charts (Histogramme)
  * 4. Aktualisiere Tabelle
+ * 5. Aktualisiere Smart Insights (V8.0+)
  *
  * WARUM ZENTRAL:
  * - Alle UI-Updates an einem Ort
@@ -36,6 +37,7 @@ function updateDashboard() {
     updateKPIs(data);
     updateCharts(data);
     updateTable(data);
+    updateInsights(); // V8.0 - Smart Insights
 }
 
 // ============================================================================
