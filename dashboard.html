@@ -1358,6 +1358,8 @@
                     return {
                         ...attrs,
                         nameeventtype,
+                        // Event-Details für Modal speichern
+                        eventData: eventData,
                         isHilfsfristRelevant: isHilfsfristRelevant(nameeventtype),
                         responseTime,
                         travelTime,
@@ -2369,15 +2371,24 @@
             window.closeEventDetailsModal = closeEventDetailsModal;
 
             async function fetchEventDetails(eventId) {
-                // Zuerst versuchen, Daten aus dem Cache (state.processedData) zu holen
+                // Daten aus dem Cache (state.processedData) holen
                 const cachedData = state.processedData.find(item => item.idevent === eventId);
 
-                // Wenn Daten im Cache sind, die Event-Details aus dem bereits geladenen eventMap verwenden
-                // Ansonsten eine neue API-Abfrage machen
-                let eventDetails = null;
-                let resourceDetails = cachedData || null;
+                if (cachedData) {
+                    // Daten sind im Cache vorhanden
+                    console.log('Event-Details aus Cache geladen:', eventId);
+                    return {
+                        eventDetails: cachedData.eventData || null,
+                        resourceDetails: cachedData
+                    };
+                }
 
-                // API-Abfrage für detaillierte Event-Informationen
+                // Wenn nicht im Cache, API-Abfragen machen
+                console.log('Event-Details nicht im Cache, lade von API:', eventId);
+                let eventDetails = null;
+                let resourceDetails = null;
+
+                // API-Abfrage für Event-Informationen
                 try {
                     const eventResponse = await esriRequest(eventsServiceUrl + "/query", {
                         query: {
@@ -2391,30 +2402,32 @@
 
                     if (eventResponse.data && eventResponse.data.features && eventResponse.data.features.length > 0) {
                         eventDetails = eventResponse.data.features[0].attributes;
+                        console.log('Event-Details von API geladen:', eventDetails);
                     }
                 } catch (error) {
                     console.error('Fehler beim Abrufen der Event-Details:', error);
+                    console.error('Error details:', error.message || error.details || error);
                 }
 
-                // Wenn keine Resource-Details im Cache, versuchen diese separat abzurufen
-                if (!resourceDetails) {
-                    try {
-                        const resourceResponse = await esriRequest(resourcesServiceUrl + "/query", {
-                            query: {
-                                where: `idevent = ${eventId}`,
-                                outFields: "*",
-                                f: "json",
-                                returnGeometry: false
-                            },
-                            responseType: "json"
-                        });
+                // API-Abfrage für Resource-Informationen
+                try {
+                    const resourceResponse = await esriRequest(resourcesServiceUrl + "/query", {
+                        query: {
+                            where: `idevent = ${eventId}`,
+                            outFields: "*",
+                            f: "json",
+                            returnGeometry: false
+                        },
+                        responseType: "json"
+                    });
 
-                        if (resourceResponse.data && resourceResponse.data.features && resourceResponse.data.features.length > 0) {
-                            resourceDetails = resourceResponse.data.features[0].attributes;
-                        }
-                    } catch (error) {
-                        console.error('Fehler beim Abrufen der Resource-Details:', error);
+                    if (resourceResponse.data && resourceResponse.data.features && resourceResponse.data.features.length > 0) {
+                        resourceDetails = resourceResponse.data.features[0].attributes;
+                        console.log('Resource-Details von API geladen:', resourceDetails);
                     }
+                } catch (error) {
+                    console.error('Fehler beim Abrufen der Resource-Details:', error);
+                    console.error('Error details:', error.message || error.details || error);
                 }
 
                 return {
