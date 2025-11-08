@@ -1022,9 +1022,6 @@ Every complex function includes:
   "call_sign": String,             // RTW identifier (e.g., "12-RTWA")
   "nameresourcetype": String,      // Resource type (Filter: "RTW")
   "idevent": Number,               // Foreign key to Einsätze table
-[Uploading Beurteilungen F34.url…]()[InternetShortcut]
-URL=https://fhhportal.ondataport.de/websites/BeurteilungenFuRWWilhelmsburg/SitePages/Home.aspx
-
 
   // Temporal Data (Unix timestamps in milliseconds)
   "time_alarm": Number,            // Timestamp: Alarm received
