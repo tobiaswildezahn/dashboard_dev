@@ -1,7 +1,7 @@
 # RTW Hilfsfrist Dashboard - Production Documentation
 
 **Version:** 7.0
-**Last Updated:** November 2024
+**Last Updated:** November 2025
 **Status:** Production Ready
 **Target Audience:** LLM-based Development, Human Developers, System Architects
 
@@ -155,17 +155,21 @@ Deployment:   Single HTML file, file:// protocol compatible
 {
   // Primary Identifiers
   "OBJECTID": Number,              // Unique record ID
-  "call_sign": String,             // RTW identifier (e.g., "RTW 12/83-01")
+  "call_sign": String,             // RTW identifier (e.g., "12-RTWA")
   "nameresourcetype": String,      // Resource type (Filter: "RTW")
   "idevent": Number,               // Foreign key to Einsätze table
+[Uploading Beurteilungen F34.url…]()[InternetShortcut]
+URL=https://fhhportal.ondataport.de/websites/BeurteilungenFuRWWilhelmsburg/SitePages/Home.aspx
+
 
   // Temporal Data (Unix timestamps in milliseconds)
   "time_alarm": Number,            // Timestamp: Alarm received
   "time_on_the_way": Number,       // Timestamp: Vehicle departed
-  "time_arrived": Number,          // Timestamp: Arrived at scene
-  "time_deployed": Number,         // Timestamp: Started patient care
-  "time_transport": Number,        // Timestamp: Departed to hospital
-  "time_available": Number,        // Timestamp: Back in service
+  "time_arrived": Number,          // Timestamp: Arrived at scene and started patient care
+  "time_to_destination": Number,   // Timestamp: Departed to hospital
+  "time_at_destination": Number,   // Timestamp: Arrived at hospital
+  "time_finished_via_radio": Number,  // Timestamp: Back in service available via radio
+  "time_finished": Number, // Timestamp: Back and available at station
 
   // Geospatial (not used in current implementation)
   "geometry": Object | null
@@ -185,9 +189,10 @@ Deployment:   Single HTML file, file:// protocol compatible
         "time_alarm": 1699372800000,
         "time_on_the_way": 1699372845000,
         "time_arrived": 1699373100000,
-        "time_deployed": 1699373120000,
-        "time_transport": 1699373900000,
-        "time_available": 1699374500000
+        "time_to_destination": 1699373120000,
+        "time_at_station": 1699373900000,
+        "time_finished_via_radio": 1699374500000,
+        "time_finished": 1699374600000,
       }
     }
   ]
@@ -214,7 +219,7 @@ Deployment:   Single HTML file, file:// protocol compatible
     {
       "attributes": {
         "id": 789,
-        "nameeventtype": "Internistischer Notfall",
+        "nameeventtype": "NOTF",
         "alarmtime": 1699372800000
       }
     }
@@ -264,9 +269,9 @@ interface ProcessedEinsatz {
 **Non-Relevant Incidents** (excluded from KPIs):
 - Suffix: `-NF`
 - Examples:
-  - `"Krankentransport-NF"` (Patient transport)
-  - `"Verlegung-NF"` (Inter-facility transfer)
-  - `"Fehlalarm-NF"` (False alarm)
+  - `"KBF-NF"` (Patient transport)
+  - `"NOTFVERL-NF"` (Inter-facility transfer)
+  - `"NOTF-NF"` (secondary emergency response)
 
 **Implementation:**
 ```javascript
@@ -494,24 +499,9 @@ function processData(rawResourceFeatures, rawEventFeatures) {
 
 ### Current Authentication Model
 
-**Authentication Type:** None (Public ArcGIS Feature Service)
+**Authentication Type:** Token-Based Authentication with ArcGis JS API Identity Manager
 
-**Access Control:**
-- Services are publicly accessible
-- No API key or token required
-- CORS headers permit browser access
-
-**Security Considerations:**
-```javascript
-// No credentials in code
-const CONFIG = {
-    serverUrl: "https://geoportal.feuerwehr.hamburg.de/ags",
-    // No apiKey, token, or credentials
-};
-```
-
-### Token-Based Authentication (Future Implementation)
-
+### Token-Based Authentication 
 If authentication becomes required, ArcGIS supports OAuth 2.0 and token-based auth:
 
 #### OAuth 2.0 Flow
@@ -534,27 +524,6 @@ require([
     const response = await esriRequest(resourcesServiceUrl + "/query", {
         query: { /* ... */ }
     });
-});
-```
-
-#### Token Generation
-
-**Option 1: Pre-generated Token**
-```bash
-# Generate via ArcGIS Portal
-curl -X POST "https://geoportal.feuerwehr.hamburg.de/ags/tokens/generateToken" \
-  -d "username=YOUR_USERNAME" \
-  -d "password=YOUR_PASSWORD" \
-  -d "expiration=60" \
-  -d "f=json"
-```
-
-**Option 2: OAuth 2.0 App**
-```javascript
-esriId.getCredential(portalUrl, {
-    oAuthPopupConfirmation: false
-}).then(credential => {
-    // credential.token available for API calls
 });
 ```
 
