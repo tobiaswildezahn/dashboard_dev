@@ -450,6 +450,7 @@
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 12px;
+            padding-right: 36px; /* Platz für Status-Badge */
         }
 
         .kpi-title {
@@ -462,7 +463,7 @@
 
         .kpi-icon {
             font-size: 20px;
-            opacity: 0.7;
+            opacity: 0.6;
         }
 
         .kpi-value {
@@ -599,6 +600,33 @@
             font-size: 11px;
             letter-spacing: 0.5px;
             border-bottom: 2px solid var(--gray-200);
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: background 0.2s ease;
+        }
+
+        thead th:hover {
+            background: var(--gray-100);
+        }
+
+        thead th.sortable::after {
+            content: '⇅';
+            margin-left: 6px;
+            opacity: 0.3;
+            font-size: 12px;
+        }
+
+        thead th.sortable.sort-asc::after {
+            content: '↑';
+            opacity: 1;
+            color: var(--primary-color);
+        }
+
+        thead th.sortable.sort-desc::after {
+            content: '↓';
+            opacity: 1;
+            color: var(--primary-color);
         }
 
         tbody tr {
@@ -1187,16 +1215,16 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>RTW</th>
-                            <th>Einsatztyp</th>
-                            <th>Relevanz</th>
-                            <th>Alarmzeit</th>
-                            <th>Ausrückezeit</th>
+                            <th class="sortable" data-sort="call_sign">RTW</th>
+                            <th class="sortable" data-sort="nameeventtype">Einsatztyp</th>
+                            <th class="sortable" data-sort="isHilfsfristRelevant">Relevanz</th>
+                            <th class="sortable" data-sort="time_alarm">Alarmzeit</th>
+                            <th class="sortable" data-sort="responseTime">Ausrückezeit</th>
                             <th>Status</th>
-                            <th>Anfahrtszeit</th>
+                            <th class="sortable" data-sort="travelTime">Anfahrtszeit</th>
                             <th>Status</th>
-                            <th>Hilfsfrist</th>
-                            <th>Event ID</th>
+                            <th class="sortable" data-sort="hilfsfristAchieved">Hilfsfrist</th>
+                            <th class="sortable" data-sort="idevent">Event ID</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -1249,7 +1277,9 @@
                     hilfsfrist: true,
                     response: true,
                     travel: true
-                }
+                },
+                tableSortColumn: 'time_alarm',
+                tableSortDirection: 'desc'
             };
 
             // Charts
@@ -2241,16 +2271,63 @@
             }
 
             // ============================================================================
-            // TABLE - MIT NAMEEVENTTYPE UND HILFSFRIST-RELEVANZ
+            // TABLE - MIT NAMEEVENTTYPE UND HILFSFRIST-RELEVANZ UND SORTIERUNG
             // ============================================================================
+
+            function sortTableData(data, column, direction) {
+                return [...data].sort((a, b) => {
+                    let aVal = a[column];
+                    let bVal = b[column];
+
+                    // Handle null/undefined values
+                    if (aVal === null || aVal === undefined) return 1;
+                    if (bVal === null || bVal === undefined) return -1;
+
+                    // Boolean comparison
+                    if (typeof aVal === 'boolean') {
+                        aVal = aVal ? 1 : 0;
+                        bVal = bVal ? 1 : 0;
+                    }
+
+                    // String comparison (case insensitive)
+                    if (typeof aVal === 'string') {
+                        aVal = aVal.toLowerCase();
+                        bVal = bVal.toLowerCase();
+                    }
+
+                    // Compare
+                    if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            function updateTableSortIndicators() {
+                // Remove all sort classes
+                document.querySelectorAll('thead th.sortable').forEach(th => {
+                    th.classList.remove('sort-asc', 'sort-desc');
+                });
+
+                // Add current sort class
+                const currentHeader = document.querySelector(`thead th[data-sort="${state.tableSortColumn}"]`);
+                if (currentHeader) {
+                    currentHeader.classList.add(`sort-${state.tableSortDirection}`);
+                }
+            }
 
             function updateTable(data) {
                 const tbody = document.getElementById('tableBody');
                 const recordCount = document.getElementById('tableRecordCount');
 
-                recordCount.textContent = data.length;
+                // Sort data
+                const sortedData = sortTableData(data, state.tableSortColumn, state.tableSortDirection);
 
-                if (data.length === 0) {
+                recordCount.textContent = sortedData.length;
+
+                // Update sort indicators
+                updateTableSortIndicators();
+
+                if (sortedData.length === 0) {
                     tbody.innerHTML = `
                         <tr>
                             <td colspan="10" class="empty-state">
@@ -2262,7 +2339,7 @@
                     return;
                 }
 
-                tbody.innerHTML = data.map(item => {
+                tbody.innerHTML = sortedData.map(item => {
                     const responseStatus = item.responseTime !== null
                         ? (item.responseAchieved ? 'success' : 'danger')
                         : 'na';
@@ -2360,26 +2437,30 @@
             // ============================================================================
 
             async function openEventDetailsModal(eventId) {
-                console.log('=== MODAL DEBUG v2.0 ===');
-                console.log('Event ID geklickt:', eventId, typeof eventId);
-                console.log('Anzahl Einträge in state.processedData:', state.processedData.length);
-                if (state.processedData.length > 0) {
-                    console.log('Erste 3 Event IDs im Cache:', state.processedData.slice(0, 3).map(item => ({
-                        idevent: item.idevent,
-                        type: typeof item.idevent,
-                        hasEventData: !!item.eventData
-                    })));
-                }
-
                 const modal = document.getElementById('eventDetailsModal');
                 const modalBody = document.getElementById('modalBodyContent');
+                const modalTitle = document.querySelector('#eventDetailsModal .modal-title');
+
+                // Schneller Lookup für Titel
+                const cachedItem = state.processedData.find(item => item.idevent == eventId);
+                const funkrufname = cachedItem?.call_sign || 'Einsatz';
+                const einsatzstichwort = cachedItem?.nameeventtype || 'Wird geladen...';
+
+                // Titel sofort setzen für bessere UX
+                modalTitle.innerHTML = `
+                    <span>🚨</span>
+                    <div>
+                        <div class="modal-title-main">${funkrufname}</div>
+                        <div class="modal-title-sub">${einsatzstichwort}</div>
+                    </div>
+                `;
 
                 // Modal öffnen mit Loading-Anzeige
                 modal.classList.add('active');
                 modalBody.innerHTML = `
                     <div class="modal-loading">
                         <div class="modal-loading-spinner"></div>
-                        <div>Lade Einsatzdetails...</div>
+                        <div>Lade Details...</div>
                     </div>
                 `;
 
@@ -2393,7 +2474,7 @@
                         <div style="text-align: center; padding: 40px; color: var(--danger-color);">
                             <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
                             <div style="font-weight: 600; margin-bottom: 8px;">Fehler beim Laden der Einsatzdetails</div>
-                            <div style="font-size: 13px; color: var(--gray-600);">${error.message}</div>
+                            <div style="font-size: 13px; color: var(--gray-600);">Bitte versuchen Sie es erneut.</div>
                         </div>
                     `;
                 }
@@ -2409,25 +2490,10 @@
             window.closeEventDetailsModal = closeEventDetailsModal;
 
             async function fetchEventDetails(eventId) {
-                console.log('>>> fetchEventDetails aufgerufen für Event ID:', eventId, typeof eventId);
-
                 // Daten aus dem Cache (state.processedData) holen
-                const cachedData = state.processedData.find(item => {
-                    console.log(`Vergleiche: item.idevent (${item.idevent}, ${typeof item.idevent}) === eventId (${eventId}, ${typeof eventId}): ${item.idevent == eventId}`);
-                    return item.idevent == eventId;  // == statt === für Type-Coercion
-                });
-
-                console.log('Cache-Suche Ergebnis:', cachedData ? 'GEFUNDEN ✓' : 'NICHT GEFUNDEN ✗');
+                const cachedData = state.processedData.find(item => item.idevent == eventId);
 
                 if (cachedData) {
-                    console.log('Cached Data:', {
-                        idevent: cachedData.idevent,
-                        call_sign: cachedData.call_sign,
-                        hasEventData: !!cachedData.eventData,
-                        eventDataKeys: cachedData.eventData ? Object.keys(cachedData.eventData) : [],
-                        eventData: cachedData.eventData
-                    });
-
                     // Daten sind im Cache vorhanden
                     return {
                         eventDetails: cachedData.eventData || {},
@@ -2435,8 +2501,7 @@
                     };
                 }
 
-                // Wenn nicht im Cache, API-Abfragen machen
-                console.log('Event-Details nicht im Cache, lade von API:', eventId);
+                // Fallback: API-Abfragen wenn nicht im Cache
                 let eventDetails = null;
                 let resourceDetails = null;
 
@@ -2454,11 +2519,9 @@
 
                     if (eventResponse.data && eventResponse.data.features && eventResponse.data.features.length > 0) {
                         eventDetails = eventResponse.data.features[0].attributes;
-                        console.log('Event-Details von API geladen:', eventDetails);
                     }
                 } catch (error) {
                     console.error('Fehler beim Abrufen der Event-Details:', error);
-                    console.error('Error details:', error.message || error.details || error);
                 }
 
                 // API-Abfrage für Resource-Informationen
@@ -2475,11 +2538,9 @@
 
                     if (resourceResponse.data && resourceResponse.data.features && resourceResponse.data.features.length > 0) {
                         resourceDetails = resourceResponse.data.features[0].attributes;
-                        console.log('Resource-Details von API geladen:', resourceDetails);
                     }
                 } catch (error) {
                     console.error('Fehler beim Abrufen der Resource-Details:', error);
-                    console.error('Error details:', error.message || error.details || error);
                 }
 
                 return {
@@ -2489,13 +2550,6 @@
             }
 
             function displayEventDetails(details) {
-                console.log('>>> displayEventDetails aufgerufen');
-                console.log('eventDetails:', details.eventDetails);
-                console.log('resourceDetails:', details.resourceDetails ? {
-                    idevent: details.resourceDetails.idevent,
-                    call_sign: details.resourceDetails.call_sign
-                } : null);
-
                 const modalBody = document.getElementById('modalBodyContent');
                 const { eventDetails, resourceDetails } = details;
 
@@ -2503,16 +2557,12 @@
                 const hasEventDetails = eventDetails && Object.keys(eventDetails).length > 0;
                 const hasResourceDetails = resourceDetails && Object.keys(resourceDetails).length > 0;
 
-                console.log('hasEventDetails:', hasEventDetails);
-                console.log('hasResourceDetails:', hasResourceDetails);
-
                 if (!hasEventDetails && !hasResourceDetails) {
-                    console.log('Zeige "Keine Details gefunden"');
                     modalBody.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: var(--gray-600);">
                             <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
-                            <div>Keine Details für diesen Einsatz gefunden</div>
-                            <div style="margin-top: 12px; font-size: 12px;">Event Details: ${hasEventDetails ? 'Ja' : 'Nein'} | Resource Details: ${hasResourceDetails ? 'Ja' : 'Nein'}</div>
+                            <div style="font-weight: 600; margin-bottom: 8px;">Keine Details verfügbar</div>
+                            <div style="font-size: 13px;">Die Einsatzdetails konnten nicht geladen werden.</div>
                         </div>
                     `;
                     return;
@@ -2669,12 +2719,30 @@
             document.getElementById('selectAllRtwBtn').addEventListener('click', selectAllRtw);
             document.getElementById('deselectAllRtwBtn').addEventListener('click', deselectAllRtw);
 
+            // Table sorting
+            document.querySelectorAll('thead th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const column = th.dataset.sort;
+
+                    // Toggle direction if same column, otherwise default to asc
+                    if (state.tableSortColumn === column) {
+                        state.tableSortDirection = state.tableSortDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        state.tableSortColumn = column;
+                        state.tableSortDirection = 'asc';
+                    }
+
+                    // Re-render table with sorted data
+                    updateTable(filterBySelectedRtw(state.processedData));
+                });
+            });
+
             // ============================================================================
             // INITIALIZATION
             // ============================================================================
 
             async function init() {
-                console.log('RTW Hilfsfrist Dashboard V7.1 (Standalone) initialisiert - DEBUG MODE');
+                console.log('RTW Hilfsfrist Dashboard V7.1 (Standalone) - Production');
                 console.log('Features:');
                 console.log('✅ Granulare Histogramme (10s bzw. 1min Schritte)');
                 console.log('✅ Kompaktes Datumsformat (DD.MM HH:mm)');
