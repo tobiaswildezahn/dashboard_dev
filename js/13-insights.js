@@ -28,6 +28,8 @@
 function generateInsights(data, maxInsights) {
     maxInsights = maxInsights || 10;
 
+    console.log('🧠 Smart Insights: Generiere Insights für', data.length, 'Datensätze');
+
     const insights = {
         critical: [],
         warnings: [],
@@ -36,6 +38,7 @@ function generateInsights(data, maxInsights) {
     };
 
     if (!data || data.length === 0) {
+        console.warn('⚠️ Keine Daten für Insights vorhanden');
         return insights;
     }
 
@@ -53,8 +56,14 @@ function generateInsights(data, maxInsights) {
 
     const rtws = Array.from(rtwSet);
 
+    console.log('   📊 Analysiere', rtws.length, 'RTWs:', rtws.join(', '));
+
     rtws.forEach(function(rtwCallSign) {
         const anomalies = detectRtwAnomalies(rtwCallSign, data);
+
+        if (anomalies.length > 0) {
+            console.log('   ⚠️', rtwCallSign, '→', anomalies.length, 'Anomalien erkannt');
+        }
 
         anomalies.forEach(function(anomaly) {
             const insight = {
@@ -301,6 +310,22 @@ function generateInsights(data, maxInsights) {
         insights.critical = insights.all.filter(function(i) { return i.severity === 'critical'; });
         insights.warnings = insights.all.filter(function(i) { return i.severity === 'warning'; });
         insights.info = insights.all.filter(function(i) { return i.severity === 'info'; });
+    }
+
+    console.log('✅ Insights generiert:', {
+        critical: insights.critical.length,
+        warnings: insights.warnings.length,
+        info: insights.info.length,
+        total: insights.all.length
+    });
+
+    if (insights.all.length > 0) {
+        console.log('   Top 5 Insights:');
+        insights.all.slice(0, 5).forEach(function(insight, i) {
+            console.log('   ' + (i + 1) + '.', insight.severity.toUpperCase(), '-', insight.title);
+        });
+    } else {
+        console.log('   ℹ️ Keine Anomalien oder Muster erkannt');
     }
 
     return insights;

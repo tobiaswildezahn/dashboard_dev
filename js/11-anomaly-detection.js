@@ -96,8 +96,8 @@ function detectAnomalyZScore(value, dataset) {
         absZScore: absZ,
         mean: stats.mean,
         stdDev: stats.stdDev,
-        isAnomaly: absZ > 2,
-        severity: absZ > 3 ? 'critical' : (absZ > 2 ? 'warning' : 'normal'),
+        isAnomaly: absZ > 1.5,  // Gesenkt von 2.0 auf 1.5 für mehr Sensitivität
+        severity: absZ > 2.5 ? 'critical' : (absZ > 1.5 ? 'warning' : 'normal'),
         direction: zScore > 0 ? 'above' : 'below',
         percentage: ((value - stats.mean) / stats.mean * 100).toFixed(1)
     };
@@ -267,6 +267,8 @@ function detectRtwAnomalies(rtwCallSign, allData) {
         return anomalies;
     }
 
+    console.log('      🔍', rtwCallSign, '→', rtwData.length, 'Einsätze');
+
     // Baseline: Alle RTWs kombiniert (zum Vergleich)
     const allResponseTimes = allData.map(function(item) { return item.response_time; }).filter(function(t) { return t !== null; });
     const allTravelTimes = allData.map(function(item) { return item.travel_time; }).filter(function(t) { return t !== null; });
@@ -287,6 +289,10 @@ function detectRtwAnomalies(rtwCallSign, allData) {
     // 1. AUSRÜCKEZEIT ANOMALIE
     if (avgResponseTime !== null && allResponseTimes.length > 3) {
         const zScoreResult = detectAnomalyZScore(avgResponseTime, allResponseTimes);
+
+        if (zScoreResult) {
+            console.log('         Ausrückezeit:', avgResponseTime.toFixed(0) + 's, Z-Score:', zScoreResult.zScore.toFixed(2), zScoreResult.isAnomaly ? '⚠️ ANOMALIE' : '✓');
+        }
 
         if (zScoreResult && zScoreResult.isAnomaly) {
             anomalies.push({
