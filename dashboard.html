@@ -751,6 +751,153 @@
             color: white;
         }
 
+        /* Modal Popup für Einsatzdetails */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-600);
+        }
+
+        .modal-loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--gray-200);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        .detail-field {
+            margin-bottom: 20px;
+        }
+
+        .detail-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-600);
+            margin-bottom: 6px;
+        }
+
+        .detail-value {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--gray-900);
+            padding: 10px 12px;
+            background: var(--gray-50);
+            border-left: 3px solid var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .detail-value.empty {
+            color: var(--gray-400);
+            font-style: italic;
+        }
+
+        .event-id-link {
+            color: var(--info-color);
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .event-id-link:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .charts-grid {
@@ -778,6 +925,25 @@
 
     <!-- Message Toast -->
     <div class="message-toast" id="messageToast"></div>
+
+    <!-- Modal für Einsatzdetails -->
+    <div class="modal-overlay" id="eventDetailsModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>🚨</span>
+                    <span>Einsatzdetails</span>
+                </div>
+                <button class="modal-close-btn" onclick="closeEventDetailsModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBodyContent">
+                <div class="modal-loading">
+                    <div class="modal-loading-spinner"></div>
+                    <div>Lade Einsatzdetails...</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="dashboard-container">
         <!-- Header -->
@@ -1344,7 +1510,7 @@
                         esriRequest(eventsServiceUrl + "/query", {
                             query: {
                                 where: eventWhereClause,
-                                outFields: "id,nameeventtype",
+                                outFields: "id,nameeventtype,street1,street2,zipcode,city,revier_bf_ab_2018,dias_resultmedical",
                                 f: "json",
                                 returnGeometry: false
                             },
@@ -2104,7 +2270,7 @@
                                 hilfsfristStatus === 'success' ? '✓ Erreicht' :
                                 hilfsfristStatus === 'danger' ? '✗ Nicht erreicht' : 'N/A'
                             }</span></td>
-                            <td>${item.idevent || 'N/A'}</td>
+                            <td>${item.idevent ? `<a href="#" class="event-id-link" onclick="openEventDetailsModal(${item.idevent}); return false;">${item.idevent}</a>` : 'N/A'}</td>
                         </tr>
                     `;
                 }).join('');
@@ -2159,6 +2325,212 @@
 
                 showMessage(`✅ CSV-Export erfolgreich (${data.length} Einträge)`, 'success');
             }
+
+            // ============================================================================
+            // EINSATZDETAILS MODAL
+            // ============================================================================
+
+            async function openEventDetailsModal(eventId) {
+                const modal = document.getElementById('eventDetailsModal');
+                const modalBody = document.getElementById('modalBodyContent');
+
+                // Modal öffnen mit Loading-Anzeige
+                modal.classList.add('active');
+                modalBody.innerHTML = `
+                    <div class="modal-loading">
+                        <div class="modal-loading-spinner"></div>
+                        <div>Lade Einsatzdetails...</div>
+                    </div>
+                `;
+
+                // Einsatzdetails abrufen
+                try {
+                    const details = await fetchEventDetails(eventId);
+                    displayEventDetails(details);
+                } catch (error) {
+                    console.error('Fehler beim Laden der Einsatzdetails:', error);
+                    modalBody.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--danger-color);">
+                            <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                            <div style="font-weight: 600; margin-bottom: 8px;">Fehler beim Laden der Einsatzdetails</div>
+                            <div style="font-size: 13px; color: var(--gray-600);">${error.message}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            function closeEventDetailsModal() {
+                const modal = document.getElementById('eventDetailsModal');
+                modal.classList.remove('active');
+            }
+
+            async function fetchEventDetails(eventId) {
+                // Zuerst versuchen, Daten aus dem Cache (state.processedData) zu holen
+                const cachedData = state.processedData.find(item => item.idevent === eventId);
+
+                // Wenn Daten im Cache sind, die Event-Details aus dem bereits geladenen eventMap verwenden
+                // Ansonsten eine neue API-Abfrage machen
+                let eventDetails = null;
+                let resourceDetails = cachedData || null;
+
+                // API-Abfrage für detaillierte Event-Informationen
+                try {
+                    const eventResponse = await esriRequest(eventsServiceUrl + "/query", {
+                        query: {
+                            where: `id = ${eventId}`,
+                            outFields: "id,nameeventtype,street1,street2,zipcode,city,revier_bf_ab_2018,dias_resultmedical",
+                            f: "json",
+                            returnGeometry: false
+                        },
+                        responseType: "json"
+                    });
+
+                    if (eventResponse.data && eventResponse.data.features && eventResponse.data.features.length > 0) {
+                        eventDetails = eventResponse.data.features[0].attributes;
+                    }
+                } catch (error) {
+                    console.error('Fehler beim Abrufen der Event-Details:', error);
+                }
+
+                // Wenn keine Resource-Details im Cache, versuchen diese separat abzurufen
+                if (!resourceDetails) {
+                    try {
+                        const resourceResponse = await esriRequest(resourcesServiceUrl + "/query", {
+                            query: {
+                                where: `idevent = ${eventId}`,
+                                outFields: "*",
+                                f: "json",
+                                returnGeometry: false
+                            },
+                            responseType: "json"
+                        });
+
+                        if (resourceResponse.data && resourceResponse.data.features && resourceResponse.data.features.length > 0) {
+                            resourceDetails = resourceResponse.data.features[0].attributes;
+                        }
+                    } catch (error) {
+                        console.error('Fehler beim Abrufen der Resource-Details:', error);
+                    }
+                }
+
+                return {
+                    eventDetails,
+                    resourceDetails
+                };
+            }
+
+            function displayEventDetails(details) {
+                const modalBody = document.getElementById('modalBodyContent');
+                const { eventDetails, resourceDetails } = details;
+
+                if (!eventDetails && !resourceDetails) {
+                    modalBody.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--gray-600);">
+                            <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                            <div>Keine Details für diesen Einsatz gefunden</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Einsatzdauer berechnen (falls möglich)
+                let einsatzdauer = 'N/A';
+                if (resourceDetails && resourceDetails.time_alarm && resourceDetails.time_finished) {
+                    const dauer = (new Date(resourceDetails.time_finished) - new Date(resourceDetails.time_alarm)) / 1000 / 60;
+                    einsatzdauer = `${Math.round(dauer)} Minuten`;
+                } else if (resourceDetails && resourceDetails.time_alarm && resourceDetails.time_finished_via_radio) {
+                    const dauer = (new Date(resourceDetails.time_finished_via_radio) - new Date(resourceDetails.time_alarm)) / 1000 / 60;
+                    einsatzdauer = `${Math.round(dauer)} Minuten`;
+                }
+
+                // Einsatzadresse zusammenstellen
+                let einsatzadresse = 'N/A';
+                if (eventDetails) {
+                    if (eventDetails.street1 && eventDetails.street2) {
+                        einsatzadresse = `${eventDetails.street1}/${eventDetails.street2}`;
+                    } else if (eventDetails.street1) {
+                        einsatzadresse = eventDetails.street1;
+                    }
+                }
+
+                const html = `
+                    <div class="detail-field">
+                        <div class="detail-label">Funkrufname</div>
+                        <div class="detail-value ${!resourceDetails?.call_sign ? 'empty' : ''}">
+                            ${resourceDetails?.call_sign || 'Nicht verfügbar'}
+                        </div>
+                    </div>
+
+                    <div class="detail-field">
+                        <div class="detail-label">Einsatzstichwort</div>
+                        <div class="detail-value ${!eventDetails?.nameeventtype ? 'empty' : ''}">
+                            ${eventDetails?.nameeventtype || 'Nicht verfügbar'}
+                        </div>
+                    </div>
+
+                    <div class="detail-field">
+                        <div class="detail-label">Einsatzadresse</div>
+                        <div class="detail-value ${einsatzadresse === 'N/A' ? 'empty' : ''}">
+                            ${einsatzadresse}
+                        </div>
+                    </div>
+
+                    <div class="detail-field">
+                        <div class="detail-label">Postleitzahl</div>
+                        <div class="detail-value ${!eventDetails?.zipcode ? 'empty' : ''}">
+                            ${eventDetails?.zipcode || 'Nicht verfügbar'}
+                        </div>
+                    </div>
+
+                    <div class="detail-field">
+                        <div class="detail-label">Stadt</div>
+                        <div class="detail-value ${!eventDetails?.city ? 'empty' : ''}">
+                            ${eventDetails?.city || 'Nicht verfügbar'}
+                        </div>
+                    </div>
+
+                    <div class="detail-field">
+                        <div class="detail-label">Einsatzrevier</div>
+                        <div class="detail-value ${!eventDetails?.revier_bf_ab_2018 ? 'empty' : ''}">
+                            ${eventDetails?.revier_bf_ab_2018 || 'Nicht verfügbar'}
+                        </div>
+                    </div>
+
+                    <div class="detail-field">
+                        <div class="detail-label">Einsatzdauer</div>
+                        <div class="detail-value ${einsatzdauer === 'N/A' ? 'empty' : ''}">
+                            ${einsatzdauer}
+                        </div>
+                    </div>
+
+                    <div class="detail-field">
+                        <div class="detail-label">Notrufabfrage</div>
+                        <div class="detail-value ${!eventDetails?.dias_resultmedical ? 'empty' : ''}">
+                            ${eventDetails?.dias_resultmedical || 'Nicht verfügbar'}
+                        </div>
+                    </div>
+                `;
+
+                modalBody.innerHTML = html;
+            }
+
+            // Modal schließen beim Klick auf Overlay
+            document.addEventListener('click', function(event) {
+                const modal = document.getElementById('eventDetailsModal');
+                if (event.target === modal) {
+                    closeEventDetailsModal();
+                }
+            });
+
+            // Modal schließen mit Escape-Taste
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    const modal = document.getElementById('eventDetailsModal');
+                    if (modal.classList.contains('active')) {
+                        closeEventDetailsModal();
+                    }
+                }
+            });
 
             // ============================================================================
             // AUTO-REFRESH
