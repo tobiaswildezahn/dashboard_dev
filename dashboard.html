@@ -858,7 +858,14 @@
         }
 
         .detail-field {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
         }
 
         .detail-label {
@@ -883,6 +890,18 @@
         .detail-value.empty {
             color: var(--gray-400);
             font-style: italic;
+        }
+
+        .modal-title-main {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .modal-title-sub {
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0.9;
+            margin-top: 4px;
         }
 
         .event-id-link {
@@ -913,6 +932,14 @@
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 12px;
+            }
+
+            .detail-row {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-card {
+                width: 95%;
             }
         }
     </style>
@@ -2491,13 +2518,33 @@
                     return;
                 }
 
-                // Einsatzdauer berechnen (falls möglich)
+                // Titel aktualisieren
+                const modalTitle = document.querySelector('#eventDetailsModal .modal-title');
+                const funkrufname = resourceDetails?.call_sign || 'Unbekannt';
+                const einsatzstichwort = eventDetails?.nameeventtype || 'Unbekannt';
+                modalTitle.innerHTML = `
+                    <span>🚨</span>
+                    <div>
+                        <div class="modal-title-main">${funkrufname}</div>
+                        <div class="modal-title-sub">${einsatzstichwort}</div>
+                    </div>
+                `;
+
+                // Einsatzdauer berechnen (neue Logik)
                 let einsatzdauer = 'N/A';
-                if (resourceDetails && resourceDetails.time_alarm && resourceDetails.time_finished) {
-                    const dauer = (new Date(resourceDetails.time_finished) - new Date(resourceDetails.time_alarm)) / 1000 / 60;
-                    einsatzdauer = `${Math.round(dauer)} Minuten`;
-                } else if (resourceDetails && resourceDetails.time_alarm && resourceDetails.time_finished_via_radio) {
-                    const dauer = (new Date(resourceDetails.time_finished_via_radio) - new Date(resourceDetails.time_alarm)) / 1000 / 60;
+                let einsatzEnde = null;
+
+                if (resourceDetails && resourceDetails.time_alarm) {
+                    // Priorität: time_finished_via_radio > time_finished > aktuelle Zeit
+                    if (resourceDetails.time_finished_via_radio) {
+                        einsatzEnde = resourceDetails.time_finished_via_radio;
+                    } else if (resourceDetails.time_finished) {
+                        einsatzEnde = resourceDetails.time_finished;
+                    } else {
+                        einsatzEnde = Date.now();
+                    }
+
+                    const dauer = (new Date(einsatzEnde) - new Date(resourceDetails.time_alarm)) / 1000 / 60;
                     einsatzdauer = `${Math.round(dauer)} Minuten`;
                 }
 
@@ -2511,39 +2558,25 @@
                     }
                 }
 
+                // PLZ und Stadt zusammenstellen
+                const plzStadt = eventDetails?.zipcode && eventDetails?.city
+                    ? `${eventDetails.zipcode} ${eventDetails.city}`
+                    : eventDetails?.zipcode || eventDetails?.city || 'N/A';
+
                 const html = `
-                    <div class="detail-field">
-                        <div class="detail-label">Funkrufname</div>
-                        <div class="detail-value ${!resourceDetails?.call_sign ? 'empty' : ''}">
-                            ${resourceDetails?.call_sign || 'Nicht verfügbar'}
+                    <div class="detail-row">
+                        <div class="detail-field">
+                            <div class="detail-label">Einsatzadresse</div>
+                            <div class="detail-value ${einsatzadresse === 'N/A' ? 'empty' : ''}">
+                                ${einsatzadresse}
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="detail-field">
-                        <div class="detail-label">Einsatzstichwort</div>
-                        <div class="detail-value ${!eventDetails?.nameeventtype ? 'empty' : ''}">
-                            ${eventDetails?.nameeventtype || 'Nicht verfügbar'}
-                        </div>
-                    </div>
-
-                    <div class="detail-field">
-                        <div class="detail-label">Einsatzadresse</div>
-                        <div class="detail-value ${einsatzadresse === 'N/A' ? 'empty' : ''}">
-                            ${einsatzadresse}
-                        </div>
-                    </div>
-
-                    <div class="detail-field">
-                        <div class="detail-label">Postleitzahl</div>
-                        <div class="detail-value ${!eventDetails?.zipcode ? 'empty' : ''}">
-                            ${eventDetails?.zipcode || 'Nicht verfügbar'}
-                        </div>
-                    </div>
-
-                    <div class="detail-field">
-                        <div class="detail-label">Stadt</div>
-                        <div class="detail-value ${!eventDetails?.city ? 'empty' : ''}">
-                            ${eventDetails?.city || 'Nicht verfügbar'}
+                        <div class="detail-field">
+                            <div class="detail-label">PLZ / Stadt</div>
+                            <div class="detail-value ${plzStadt === 'N/A' ? 'empty' : ''}">
+                                ${plzStadt}
+                            </div>
                         </div>
                     </div>
 
