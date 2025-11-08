@@ -126,4 +126,5 @@ async function init() {
     startAutoRefresh();
 }
 
-init();
+// NOTE: init() is called from index.html AMD wrapper after esriRequest is available
+// Do NOT call init() here - it will cause "esriRequest is not defined" error
