@@ -1,0 +1,21 @@
+/* RTW Hilfsfrist Dashboard - Charts */
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.chart-container {
+    position: relative;
+    height: 320px;
+}
