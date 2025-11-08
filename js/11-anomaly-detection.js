@@ -275,12 +275,12 @@ function detectRtwAnomalies(rtwCallSign, allData) {
     }
 
     // Baseline: Alle RTWs kombiniert (zum Vergleich)
-    const allResponseTimes = allData.map(function(item) { return item.response_time; }).filter(function(t) { return t !== null && !isNaN(t); });
-    const allTravelTimes = allData.map(function(item) { return item.travel_time; }).filter(function(t) { return t !== null && !isNaN(t); });
+    const allResponseTimes = allData.map(function(item) { return item.responseTime; }).filter(function(t) { return t !== null && !isNaN(t); });
+    const allTravelTimes = allData.map(function(item) { return item.travelTime; }).filter(function(t) { return t !== null && !isNaN(t); });
 
     // Daten für diesen RTW
-    const rtwResponseTimes = rtwData.map(function(item) { return item.response_time; }).filter(function(t) { return t !== null && !isNaN(t); });
-    const rtwTravelTimes = rtwData.map(function(item) { return item.travel_time; }).filter(function(t) { return t !== null && !isNaN(t); });
+    const rtwResponseTimes = rtwData.map(function(item) { return item.responseTime; }).filter(function(t) { return t !== null && !isNaN(t); });
+    const rtwTravelTimes = rtwData.map(function(item) { return item.travelTime; }).filter(function(t) { return t !== null && !isNaN(t); });
 
     console.log('         Response Times:', rtwResponseTimes.length, 'von', rtwData.length, '| Travel Times:', rtwTravelTimes.length, 'von', rtwData.length);
 
@@ -442,8 +442,8 @@ function detectRevierAnomalies(revier, allData) {
     }
 
     // 3. ANFAHRTSZEIT ANOMALIE
-    const revierTravelTimes = revierData.map(function(item) { return item.travel_time; }).filter(function(t) { return t !== null; });
-    const allTravelTimes = allData.map(function(item) { return item.travel_time; }).filter(function(t) { return t !== null; });
+    const revierTravelTimes = revierData.map(function(item) { return item.travelTime; }).filter(function(t) { return t !== null; });
+    const allTravelTimes = allData.map(function(item) { return item.travelTime; }).filter(function(t) { return t !== null; });
 
     if (revierTravelTimes.length > 0 && allTravelTimes.length > 3) {
         const avgRevierTravelTime = revierTravelTimes.reduce((a, b) => a + b, 0) / revierTravelTimes.length;
