@@ -3536,7 +3536,7 @@ This dashboard is a **production-critical emergency services application** with:
 
 **Primary Goal:** Monitor Hamburg Fire Department ambulance response times with legal compliance, data privacy, and operational security.
 
-**Your Role as LLM:** Respect security patterns, maintain architectural constraints, preserve German documentation, and prioritize patient safety in all code suggestions.
+**Your Role as LLM:** Write professional and excellent code, Apply state of the art statistics and dashboard techniques, Respect security patterns, maintain architectural constraints, preserve German documentation, and prioritize patient safety in all code suggestions.
 
 ---
 
