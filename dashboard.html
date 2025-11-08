@@ -2364,6 +2364,10 @@
                 modal.classList.remove('active');
             }
 
+            // Funktionen global verfügbar machen
+            window.openEventDetailsModal = openEventDetailsModal;
+            window.closeEventDetailsModal = closeEventDetailsModal;
+
             async function fetchEventDetails(eventId) {
                 // Zuerst versuchen, Daten aus dem Cache (state.processedData) zu holen
                 const cachedData = state.processedData.find(item => item.idevent === eventId);
