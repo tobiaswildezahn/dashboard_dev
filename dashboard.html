@@ -2333,6 +2333,17 @@
             // ============================================================================
 
             async function openEventDetailsModal(eventId) {
+                console.log('=== MODAL DEBUG v2.0 ===');
+                console.log('Event ID geklickt:', eventId, typeof eventId);
+                console.log('Anzahl Einträge in state.processedData:', state.processedData.length);
+                if (state.processedData.length > 0) {
+                    console.log('Erste 3 Event IDs im Cache:', state.processedData.slice(0, 3).map(item => ({
+                        idevent: item.idevent,
+                        type: typeof item.idevent,
+                        hasEventData: !!item.eventData
+                    })));
+                }
+
                 const modal = document.getElementById('eventDetailsModal');
                 const modalBody = document.getElementById('modalBodyContent');
 
@@ -2371,14 +2382,28 @@
             window.closeEventDetailsModal = closeEventDetailsModal;
 
             async function fetchEventDetails(eventId) {
+                console.log('>>> fetchEventDetails aufgerufen für Event ID:', eventId, typeof eventId);
+
                 // Daten aus dem Cache (state.processedData) holen
-                const cachedData = state.processedData.find(item => item.idevent === eventId);
+                const cachedData = state.processedData.find(item => {
+                    console.log(`Vergleiche: item.idevent (${item.idevent}, ${typeof item.idevent}) === eventId (${eventId}, ${typeof eventId}): ${item.idevent == eventId}`);
+                    return item.idevent == eventId;  // == statt === für Type-Coercion
+                });
+
+                console.log('Cache-Suche Ergebnis:', cachedData ? 'GEFUNDEN ✓' : 'NICHT GEFUNDEN ✗');
 
                 if (cachedData) {
+                    console.log('Cached Data:', {
+                        idevent: cachedData.idevent,
+                        call_sign: cachedData.call_sign,
+                        hasEventData: !!cachedData.eventData,
+                        eventDataKeys: cachedData.eventData ? Object.keys(cachedData.eventData) : [],
+                        eventData: cachedData.eventData
+                    });
+
                     // Daten sind im Cache vorhanden
-                    console.log('Event-Details aus Cache geladen:', eventId);
                     return {
-                        eventDetails: cachedData.eventData || null,
+                        eventDetails: cachedData.eventData || {},
                         resourceDetails: cachedData
                     };
                 }
@@ -2437,14 +2462,30 @@
             }
 
             function displayEventDetails(details) {
+                console.log('>>> displayEventDetails aufgerufen');
+                console.log('eventDetails:', details.eventDetails);
+                console.log('resourceDetails:', details.resourceDetails ? {
+                    idevent: details.resourceDetails.idevent,
+                    call_sign: details.resourceDetails.call_sign
+                } : null);
+
                 const modalBody = document.getElementById('modalBodyContent');
                 const { eventDetails, resourceDetails } = details;
 
-                if (!eventDetails && !resourceDetails) {
+                // Prüfe ob eventDetails ein leeres Objekt ist
+                const hasEventDetails = eventDetails && Object.keys(eventDetails).length > 0;
+                const hasResourceDetails = resourceDetails && Object.keys(resourceDetails).length > 0;
+
+                console.log('hasEventDetails:', hasEventDetails);
+                console.log('hasResourceDetails:', hasResourceDetails);
+
+                if (!hasEventDetails && !hasResourceDetails) {
+                    console.log('Zeige "Keine Details gefunden"');
                     modalBody.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: var(--gray-600);">
                             <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
                             <div>Keine Details für diesen Einsatz gefunden</div>
+                            <div style="margin-top: 12px; font-size: 12px;">Event Details: ${hasEventDetails ? 'Ja' : 'Nein'} | Resource Details: ${hasResourceDetails ? 'Ja' : 'Nein'}</div>
                         </div>
                     `;
                     return;
@@ -2600,7 +2641,7 @@
             // ============================================================================
 
             async function init() {
-                console.log('RTW Hilfsfrist Dashboard V7 (Standalone) initialisiert');
+                console.log('RTW Hilfsfrist Dashboard V7.1 (Standalone) initialisiert - DEBUG MODE');
                 console.log('Features:');
                 console.log('✅ Granulare Histogramme (10s bzw. 1min Schritte)');
                 console.log('✅ Kompaktes Datumsformat (DD.MM HH:mm)');
