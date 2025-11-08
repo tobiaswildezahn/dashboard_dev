@@ -267,13 +267,6 @@ function detectRtwAnomalies(rtwCallSign, allData) {
         return anomalies;
     }
 
-    console.log('      🔍', rtwCallSign, '→', rtwData.length, 'Einsätze');
-
-    // DEBUG: Zeige ein Beispiel-Item um Struktur zu sehen
-    if (rtwData.length > 0) {
-        console.log('         DEBUG Beispiel-Item:', rtwData[0]);
-    }
-
     // Baseline: Alle RTWs kombiniert (zum Vergleich)
     const allResponseTimes = allData.map(function(item) { return item.responseTime; }).filter(function(t) { return t !== null && !isNaN(t); });
     const allTravelTimes = allData.map(function(item) { return item.travelTime; }).filter(function(t) { return t !== null && !isNaN(t); });
@@ -281,8 +274,6 @@ function detectRtwAnomalies(rtwCallSign, allData) {
     // Daten für diesen RTW
     const rtwResponseTimes = rtwData.map(function(item) { return item.responseTime; }).filter(function(t) { return t !== null && !isNaN(t); });
     const rtwTravelTimes = rtwData.map(function(item) { return item.travelTime; }).filter(function(t) { return t !== null && !isNaN(t); });
-
-    console.log('         Response Times:', rtwResponseTimes.length, 'von', rtwData.length, '| Travel Times:', rtwTravelTimes.length, 'von', rtwData.length);
 
     // Durchschnitte berechnen
     const avgResponseTime = rtwResponseTimes.length > 0
@@ -296,10 +287,6 @@ function detectRtwAnomalies(rtwCallSign, allData) {
     // 1. AUSRÜCKEZEIT ANOMALIE
     if (avgResponseTime !== null && allResponseTimes.length > 3) {
         const zScoreResult = detectAnomalyZScore(avgResponseTime, allResponseTimes);
-
-        if (zScoreResult) {
-            console.log('         Ausrückezeit:', avgResponseTime.toFixed(0) + 's, Z-Score:', zScoreResult.zScore.toFixed(2), zScoreResult.isAnomaly ? '⚠️ ANOMALIE' : '✓');
-        }
 
         if (zScoreResult && zScoreResult.isAnomaly) {
             anomalies.push({
@@ -379,10 +366,19 @@ function detectRtwAnomalies(rtwCallSign, allData) {
 function detectRevierAnomalies(revier, allData) {
     const anomalies = [];
 
+    console.log('      🏘️ REVIER:', revier);
+
     // Filtere Daten für dieses Revier
     const revierData = allData.filter(function(item) {
         return item.revier_bf_ab_2018 === revier;
     });
+
+    console.log('         → Einsätze in diesem Revier:', revierData.length);
+
+    // DEBUG: Zeige ein Beispiel-Item um Struktur zu sehen
+    if (revierData.length > 0) {
+        console.log('         DEBUG Beispiel-Item:', revierData[0]);
+    }
 
     if (revierData.length === 0) {
         return anomalies;
@@ -400,11 +396,16 @@ function detectRevierAnomalies(revier, allData) {
     const revierCounts = Object.values(reviereMap);
     const avgEinsaetzeProRevier = revierCounts.reduce((a, b) => a + b, 0) / revierCounts.length;
 
+    console.log('         Alle Reviere:', Object.keys(reviereMap).length, '| Durchschnitt Einsätze/Revier:', avgEinsaetzeProRevier.toFixed(1));
+
     // 1. EINSATZDICHTE ANOMALIE
     const einsatzCount = revierData.length;
     const einsatzStats = calculateStatistics(revierCounts);
 
+    console.log('         🔍 Check 1: Einsatzdichte -', einsatzCount, 'Einsätze (Mean:', einsatzStats ? einsatzStats.mean.toFixed(1) : 'N/A', ', Threshold:', einsatzStats ? (einsatzStats.mean * 1.5).toFixed(1) : 'N/A', ')');
+
     if (einsatzStats && einsatzCount > einsatzStats.mean * 1.5) {
+        console.log('            ⚠️ ANOMALIE: Einsatzdichte zu hoch!');
         anomalies.push({
             type: 'einsatz_density',
             revier: revier,
@@ -424,11 +425,16 @@ function detectRevierAnomalies(revier, allData) {
     const allHilfsfristMet = allData.filter(function(item) { return item.hilfsfrist_met === true; }).length;
     const allHilfsfristQuote = allData.length > 0 ? (allHilfsfristMet / allData.length * 100) : null;
 
+    console.log('         🔍 Check 2: Hilfsfrist-Quote -', revierHilfsfristQuote ? revierHilfsfristQuote.toFixed(1) + '%' : 'N/A', '(Baseline:', allHilfsfristQuote ? allHilfsfristQuote.toFixed(1) + '%' : 'N/A', ')');
+
     if (revierHilfsfristQuote !== null && allHilfsfristQuote !== null) {
         const quoteDelta = revierHilfsfristQuote - allHilfsfristQuote;
 
+        console.log('            Delta:', quoteDelta.toFixed(1), 'PP (Threshold: -10 PP)');
+
         // Anomalie wenn > 10 Prozentpunkte schlechter
         if (quoteDelta < -10) {
+            console.log('            ⚠️ ANOMALIE: Hilfsfrist-Quote zu niedrig!');
             anomalies.push({
                 type: 'hilfsfrist_quote',
                 revier: revier,
@@ -445,9 +451,15 @@ function detectRevierAnomalies(revier, allData) {
     const revierTravelTimes = revierData.map(function(item) { return item.travelTime; }).filter(function(t) { return t !== null; });
     const allTravelTimes = allData.map(function(item) { return item.travelTime; }).filter(function(t) { return t !== null; });
 
+    console.log('         🔍 Check 3: Anfahrtszeit - Travel Times:', revierTravelTimes.length, 'von', revierData.length);
+
     if (revierTravelTimes.length > 0 && allTravelTimes.length > 3) {
         const avgRevierTravelTime = revierTravelTimes.reduce((a, b) => a + b, 0) / revierTravelTimes.length;
         const zScoreResult = detectAnomalyZScore(avgRevierTravelTime, allTravelTimes);
+
+        if (zScoreResult) {
+            console.log('            Anfahrtszeit:', avgRevierTravelTime.toFixed(0) + 's, Z-Score:', zScoreResult.zScore.toFixed(2), zScoreResult.isAnomaly ? '⚠️ ANOMALIE' : '✓');
+        }
 
         if (zScoreResult && zScoreResult.isAnomaly && zScoreResult.direction === 'above') {
             anomalies.push({

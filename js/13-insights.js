@@ -105,8 +105,14 @@ function generateInsights(data, maxInsights) {
 
     const reviere = Array.from(revierSet);
 
+    console.log('   🏘️  Analysiere', reviere.length, 'Reviere:', reviere.join(', '));
+
     reviere.forEach(function(revier) {
         const anomalies = detectRevierAnomalies(revier, data);
+
+        if (anomalies.length > 0) {
+            console.log('   ⚠️', 'Revier "' + revier + '" →', anomalies.length, 'Anomalien erkannt');
+        }
 
         anomalies.forEach(function(anomaly) {
             const insight = {
