@@ -13,7 +13,8 @@ const state = {
         travel: true
     },
     tableSortColumn: 'time_alarm',
-    tableSortDirection: 'desc'
+    tableSortDirection: 'desc',
+    insightsEnabled: false  // V8.0 - Smart Insights initial deaktiviert
 };
 
 // Charts

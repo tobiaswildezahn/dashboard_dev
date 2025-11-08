@@ -93,52 +93,7 @@ function generateInsights(data, maxInsights) {
     });
 
     // ========================================================================
-    // 2. REVIER-ANOMALIEN
-    // ========================================================================
-
-    const revierSet = new Set();
-    data.forEach(function(item) {
-        if (item.revier_bf_ab_2018) {
-            revierSet.add(item.revier_bf_ab_2018);
-        }
-    });
-
-    const reviere = Array.from(revierSet);
-
-    console.log('   🏘️  Analysiere', reviere.length, 'Reviere:', reviere.join(', '));
-
-    reviere.forEach(function(revier) {
-        const anomalies = detectRevierAnomalies(revier, data);
-
-        if (anomalies.length > 0) {
-            console.log('   ⚠️', 'Revier "' + revier + '" →', anomalies.length, 'Anomalien erkannt');
-        }
-
-        anomalies.forEach(function(anomaly) {
-            const insight = {
-                id: 'revier_' + revier + '_' + anomaly.type,
-                category: 'revier_anomaly',
-                type: anomaly.type,
-                severity: anomaly.severity,
-                revier: revier,
-                title: formatRevierAnomalyTitle(anomaly),
-                message: formatRevierAnomalyMessage(anomaly),
-                details: anomaly,
-                actionable: false // Noch kein Filter für Revier implementiert
-            };
-
-            insights.all.push(insight);
-
-            if (anomaly.severity === 'critical') {
-                insights.critical.push(insight);
-            } else {
-                insights.warnings.push(insight);
-            }
-        });
-    });
-
-    // ========================================================================
-    // 3. CONSECUTIVE MISSED HILFSFRIST
+    // 2. CONSECUTIVE MISSED HILFSFRIST
     // ========================================================================
 
     const consecutiveMissed = detectConsecutiveMissedHilfsfrist(data);
@@ -380,45 +335,6 @@ function formatRtwAnomalyMessage(anomaly) {
 }
 
 /**
- * Formatiert Revier-Anomalie Titel
- */
-function formatRevierAnomalyTitle(anomaly) {
-    const icon = anomaly.severity === 'critical' ? '🔴' : '⚠️';
-    let typeText = '';
-
-    switch (anomaly.type) {
-        case 'einsatz_density':
-            typeText = 'Einsatzdichte';
-            break;
-        case 'travel_time':
-            typeText = 'Anfahrtszeit';
-            break;
-        case 'hilfsfrist_quote':
-            typeText = 'Hilfsfrist-Quote';
-            break;
-        default:
-            typeText = anomaly.type;
-    }
-
-    return icon + ' Revier ' + anomaly.revier + ': ' + typeText + ' anomal';
-}
-
-/**
- * Formatiert Revier-Anomalie Message
- */
-function formatRevierAnomalyMessage(anomaly) {
-    if (anomaly.type === 'einsatz_density') {
-        return anomaly.value + ' Einsätze (Ø ' + anomaly.baseline + ') • ' + anomaly.message;
-    } else if (anomaly.type === 'travel_time') {
-        return anomaly.value + 's (Ø ' + anomaly.baseline + 's) • ' + anomaly.message;
-    } else if (anomaly.type === 'hilfsfrist_quote') {
-        return anomaly.value + '% (Ø ' + anomaly.baseline + '%) • ' + anomaly.message;
-    }
-
-    return anomaly.message;
-}
-
-/**
  * Berechnet Gesamt-Hilfsfrist-Quote
  */
 function calculateOverallHilfsfristQuote(data) {
@@ -429,10 +345,16 @@ function calculateOverallHilfsfristQuote(data) {
 /**
  * UPDATE INSIGHTS IM DASHBOARD
  *
- * Wird von updateDashboard() aufgerufen.
+ * Wird nur aufgerufen wenn Insights aktiviert sind (state.insightsEnabled).
  * Generiert und rendert Insights basierend auf aktuellen Daten.
  */
 function updateInsights() {
+    if (!state.insightsEnabled) {
+        // Zeige Platzhalter: "Klicke auf Analyse starten"
+        renderInsightsPlaceholder();
+        return;
+    }
+
     const insights = generateInsights(state.processedData, 10);
 
     // Rendere UI (siehe js/14-ui-insights.js)

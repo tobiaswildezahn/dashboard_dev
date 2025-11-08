@@ -252,3 +252,46 @@ function getActionLabel(actionType) {
 
     return labels[actionType] || 'Aktion';
 }
+
+/**
+ * RENDERT INSIGHTS PLATZHALTER (wenn deaktiviert)
+ *
+ * Zeigt eine Nachricht mit Button um Insights zu aktivieren.
+ */
+function renderInsightsPlaceholder() {
+    const container = document.getElementById('insightsContainer');
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = '<div class="insights-empty">' +
+        '<div class="insights-empty-icon">🧠</div>' +
+        '<div class="insights-empty-title">Smart Insights deaktiviert</div>' +
+        '<div class="insights-empty-text">Klicke auf "Analyse starten" um RTW-Anomalien und Muster zu erkennen.</div>' +
+        '<button class="insights-start-btn" onclick="toggleInsightsAnalysis()">🔍 Analyse starten</button>' +
+        '</div>';
+
+    // Badge verstecken
+    updateInsightCountBadge(0);
+}
+
+/**
+ * TOGGLE INSIGHTS ANALYSE AN/AUS
+ *
+ * Schaltet Smart Insights Analyse an oder aus und aktualisiert Dashboard.
+ */
+function toggleInsightsAnalysis() {
+    state.insightsEnabled = !state.insightsEnabled;
+
+    if (state.insightsEnabled) {
+        console.log('🧠 Smart Insights: AKTIVIERT');
+        showMessage('Smart Insights aktiviert', 'success');
+    } else {
+        console.log('🧠 Smart Insights: DEAKTIVIERT');
+        showMessage('Smart Insights deaktiviert', 'info');
+    }
+
+    // Update Insights
+    updateInsights();
+}
