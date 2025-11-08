@@ -121,12 +121,17 @@
 
         <!-- Smart Insights Panel -->
         <div class="insights-panel" id="insightsPanel">
-            <div class="insights-header" onclick="toggleInsightsPanel()">
+            <div class="insights-header">
                 <div class="insights-header-left">
                     <h2 class="insights-title">🧠 Smart Insights</h2>
                     <span class="insights-count-badge" id="insightsCountBadge" style="display: none;">0</span>
                 </div>
-                <span class="insights-toggle-icon" id="insightsToggleIcon">▼</span>
+                <div class="insights-header-right">
+                    <button class="insights-toggle-btn" id="insightsToggleBtn" onclick="toggleInsightsAnalysis()">
+                        <span id="insightsToggleBtnText">AUS</span>
+                    </button>
+                    <span class="insights-toggle-icon" id="insightsToggleIcon" onclick="toggleInsightsPanel()">▼</span>
+                </div>
             </div>
             <div class="insights-content" id="insightsContainer">
                 <!-- Wird dynamisch mit Insights gefüllt -->

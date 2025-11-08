@@ -256,7 +256,7 @@ function getActionLabel(actionType) {
 /**
  * RENDERT INSIGHTS PLATZHALTER (wenn deaktiviert)
  *
- * Zeigt eine Nachricht mit Button um Insights zu aktivieren.
+ * Zeigt eine Nachricht dass Insights deaktiviert sind.
  */
 function renderInsightsPlaceholder() {
     const container = document.getElementById('insightsContainer');
@@ -266,10 +266,9 @@ function renderInsightsPlaceholder() {
     }
 
     container.innerHTML = '<div class="insights-empty">' +
-        '<div class="insights-empty-icon">🧠</div>' +
+        '<div class="insights-empty-icon">💤</div>' +
         '<div class="insights-empty-title">Smart Insights deaktiviert</div>' +
-        '<div class="insights-empty-text">Klicke auf "Analyse starten" um RTW-Anomalien und Muster zu erkennen.</div>' +
-        '<button class="insights-start-btn" onclick="toggleInsightsAnalysis()">🔍 Analyse starten</button>' +
+        '<div class="insights-empty-text">Klicke auf den "AN" Button oben um RTW-Anomalien und Muster zu erkennen.</div>' +
         '</div>';
 
     // Badge verstecken
@@ -284,12 +283,22 @@ function renderInsightsPlaceholder() {
 function toggleInsightsAnalysis() {
     state.insightsEnabled = !state.insightsEnabled;
 
+    // Update Button UI
+    const btn = document.getElementById('insightsToggleBtn');
+    const btnText = document.getElementById('insightsToggleBtnText');
+
     if (state.insightsEnabled) {
         console.log('🧠 Smart Insights: AKTIVIERT');
         showMessage('Smart Insights aktiviert', 'success');
+
+        if (btn) btn.classList.add('active');
+        if (btnText) btnText.textContent = 'AN';
     } else {
         console.log('🧠 Smart Insights: DEAKTIVIERT');
         showMessage('Smart Insights deaktiviert', 'info');
+
+        if (btn) btn.classList.remove('active');
+        if (btnText) btnText.textContent = 'AUS';
     }
 
     // Update Insights

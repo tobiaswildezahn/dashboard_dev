@@ -19,18 +19,19 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    cursor: pointer;
     user-select: none;
-}
-
-.insights-header:hover {
-    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
 }
 
 .insights-header-left {
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.insights-header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
 .insights-title {
@@ -48,9 +49,44 @@
     font-weight: 600;
 }
 
+.insights-toggle-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.insights-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: translateY(-1px);
+}
+
+.insights-toggle-btn:active {
+    transform: translateY(0);
+}
+
+.insights-toggle-btn.active {
+    background: rgba(76, 175, 80, 0.3);
+    border-color: rgba(76, 175, 80, 0.6);
+}
+
 .insights-toggle-icon {
     font-size: 18px;
     transition: transform 0.3s ease;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.insights-toggle-icon:hover {
+    opacity: 0.8;
 }
 
 /* Collapsed State */
@@ -88,30 +124,6 @@
 .insights-empty-text {
     font-size: 14px;
     color: var(--color-text-secondary);
-    margin-bottom: 20px;
-}
-
-.insights-start-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 6px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-.insights-start-btn:hover {
-    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.insights-start-btn:active {
-    transform: translateY(0);
 }
 
 /* Insights Section */
