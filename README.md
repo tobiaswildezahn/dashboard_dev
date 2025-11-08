@@ -1,205 +1,140 @@
-# RTW Hilfsfrist Dashboard V7
+# RTW Hilfsfrist Dashboard
 
-Ein modernes, TypeScript-basiertes Dashboard zur Überwachung der Hilfsfrist-Kennzahlen für Rettungswagen (RTW) der Hamburger Feuerwehr.
+Echtzeit-Dashboard zur Überwachung der Hilfsfrist-Erfüllung für Rettungswagen (RTW) der Hamburger Feuerwehr.
 
-## 🚀 Features
+## 📊 Über das Dashboard
 
-### V7 Neuerungen
-- ✅ **TypeScript** - Vollständig typisierte Codebasis
-- ✅ **Modularisierte Architektur** - Best Practice Projekt-Struktur
-- ✅ **Granulare Histogramme** - 10 Sekunden bzw. 1 Minute Schritte
-- ✅ **Kompaktes Datumsformat** - Optimierte Zeitreihen-Darstellung
-- ✅ **Schicht-Filter** - Neuer Zeitfilter für aktuelle Schicht (07:00-07:00)
-- ✅ **Vite Build System** - Schnelles Development & Optimierte Builds
+Dieses Dashboard analysiert und visualisiert die Performance von Rettungswagen basierend auf:
+- **Ausrückezeit**: ≤ 90 Sekunden (Alarm → Fahrzeug fährt los)
+- **Anfahrtszeit**: ≤ 5 Minuten (Fahrzeug fährt los → Einsatzort erreicht)
+- **Hilfsfrist**: Kombination aus Ausrücke- und Anfahrtszeit
 
-### Core Features
-- 📊 Echtzeit-KPI-Tracking (Ausrückezeit, Anfahrtszeit, Hilfsfrist)
-- 📈 Interaktive Charts (Line, Bar, Pie)
-- 🔍 Flexible Filterung (Zeitraum, RTW-Auswahl)
-- 📥 CSV-Export
-- 🔄 Auto-Refresh (30 Sekunden)
-- 📱 Responsive Design
+### Features
 
-## 🏗️ Projekt-Struktur
+✅ **Echtzeit-KPI-Cards** mit Ampelschema (🟢 🟡 🔴)
+✅ **90% Perzentil-Anzeige** für realistische Performance-Benchmarks
+✅ **Tagesverlauf-Heatmap** zur Identifikation von Problemzeiten
+✅ **Interaktive Charts** (Zeitreihe, Histogramme, Verteilung)
+✅ **Detaillierte Einsatzliste** mit Toggle-Funktion
+✅ **RTW-Filter** zur Analyse einzelner Fahrzeuge
+✅ **Zeitfilter** inkl. "Aktuelle Schicht" (07:00-07:00 Uhr)
+✅ **CSV-Export** für weitere Analysen
+✅ **Auto-Refresh** alle 30 Sekunden
+
+## 🚀 Deployment (Dienstliches Umfeld)
+
+### Voraussetzungen
+- **Keine Installation erforderlich**
+- Moderner Webbrowser (Chrome, Firefox, Edge)
+- Zugriff auf ArcGIS Feature Services
+
+### Anleitung
+
+1. **Datei öffnen**
+   ```
+   Doppelklick auf: dashboard.html
+   ```
+
+2. **Dashboard lädt automatisch**
+   - Verbindet sich mit ArcGIS Feature Services
+   - Zeigt aktuelle Einsatzdaten
+   - Startet Auto-Refresh
+
+3. **Fertig!** ✅
+
+### Hinweise für dienstliches Umfeld
+
+- ✅ Funktioniert direkt vom `file://` Protokoll
+- ✅ Keine Installation von Software erforderlich
+- ✅ Keine Build-Tools oder npm benötigt
+- ✅ Alle Abhängigkeiten (ArcGIS API, Chart.js) werden von CDN geladen
+- ✅ Datenschutzkonform: Keine Daten verlassen das Netzwerk
+
+## 📁 Dateistruktur
 
 ```
 dashboard_dev/
-├── src/
-│   ├── types/
-│   │   └── types.ts              # TypeScript Type Definitions
-│   ├── utils/
-│   │   ├── constants.ts          # Konfiguration & Konstanten
-│   │   └── helpers.ts            # Hilfsfunktionen
-│   ├── services/
-│   │   ├── arcgis.service.ts     # ArcGIS Feature Service API
-│   │   ├── data-processor.service.ts  # Datenverarbeitung & KPIs
-│   │   └── export.service.ts     # CSV Export
-│   ├── components/
-│   │   ├── filters.ts            # Filter & RTW-Picker
-│   │   ├── kpi-cards.ts          # KPI-Anzeige
-│   │   ├── charts.ts             # Chart.js Visualisierungen
-│   │   └── table.ts              # Detaillierte Einsatzliste
-│   ├── styles/
-│   │   └── main.css              # Hauptstyles
-│   └── main.ts                   # Einstiegspunkt & State Management
-├── index.html                    # HTML Entry Point
-├── tsconfig.json                 # TypeScript Konfiguration
-├── vite.config.ts                # Vite Build Config
-├── package.json                  # Dependencies
-└── README.md                     # Diese Datei
+├── dashboard.html          ← Hauptdatei - Diese öffnen!
+├── archive/
+│   └── rtw_hilfsfrist_dashboard_v6_multi_kpi.html  ← Alte Version (Backup)
+├── .gitignore
+└── README.md
 ```
 
-## 🛠️ Installation & Setup
+## 🎯 Ampelschema-Schwellenwerte
 
-### Voraussetzungen
-- Node.js >= 18.x
-- npm oder yarn
+Die KPI-Cards färben sich automatisch basierend auf der Performance:
 
-### Installation
+| Status | Schwellenwert | Bedeutung |
+|--------|---------------|-----------|
+| 🟢 Grün | ≥ 90% | Exzellent |
+| 🟡 Gelb | 75-89% | Akzeptabel |
+| 🔴 Rot | < 75% | Kritisch |
 
-```bash
-# Dependencies installieren
-npm install
+## 📈 Verwendete Technologien
 
-# Development Server starten
-npm run dev
-
-# TypeScript Type-Check
-npm run type-check
-
-# Production Build
-npm run build
-
-# Build-Preview
-npm run preview
-```
-
-## 📖 Verwendung
-
-### Development
-```bash
-npm run dev
-```
-Öffnet den Development Server auf `http://localhost:3000`
-
-### Production Build
-```bash
-npm run build
-```
-Erstellt optimierten Build in `dist/`
+- **ArcGIS JavaScript API 4.33** - Zugriff auf Feature Services
+- **Chart.js 4.4.0** - Datenvisualisierung
+- **Vanilla JavaScript (ES6)** - Keine externen Frameworks
+- **AMD Module Pattern** - Kompatibilität mit file:// Protokoll
 
 ## 🔧 Konfiguration
 
-### ArcGIS Services
-Konfiguriert in `src/utils/constants.ts`:
+Die Konfiguration befindet sich direkt in `dashboard.html`:
 
-```typescript
-export const CONFIG = {
-  serverUrl: 'https://geoportal.feuerwehr.hamburg.de/ags',
-  resourcesServicePath: '/rest/services/Geoevent/Einsatzresourcen/FeatureServer/0',
-  eventsServicePath: '/rest/services/Geoevent/Einsätze_letzte_7_Tage_voll/FeatureServer/0',
-  resourceType: 'RTW',
-  responseTimeThreshold: 90,  // Sekunden
-  travelTimeThreshold: 480,   // Sekunden (8 Minuten)
-  autoRefreshInterval: 30000  // Millisekunden
+```javascript
+const CONFIG = {
+    serverUrl: "https://geoportal.feuerwehr.hamburg.de/ags",
+    resourcesServicePath: "/rest/services/Geoevent/Einsatzresourcen/FeatureServer/0",
+    eventsServicePath: "/rest/services/Geoevent/Einsätze_letzte_7_Tage_voll/FeatureServer/0",
+    resourceType: "RTW",
+    responseTimeThreshold: 90,      // Sekunden
+    travelTimeThreshold: 300,       // Sekunden (5 Minuten)
+    autoRefreshInterval: 30000      // Millisekunden
 };
 ```
 
-### Schwellenwerte
-- **Ausrückezeit**: ≤ 90 Sekunden
-- **Anfahrtszeit**: ≤ 8 Minuten (480 Sekunden)
-- **Hilfsfrist**: Beide Schwellenwerte müssen erreicht werden
+## 📊 Datenquellen
 
-## 📊 KPI-Metriken
+Das Dashboard greift auf folgende ArcGIS Feature Services zu:
+1. **Einsatzresourcen** - RTW-Bewegungsdaten (time_alarm, time_on_the_way, time_arrived)
+2. **Einsätze** - Einsatztypen und Kategorisierung (hilfsfristrelevant/nicht relevant)
 
-### Gesamteinsätze
-- Anzahl hilfsfristrelevanter Einsätze
-- Anzahl nicht-relevanter Einsätze (Suffix: `-NF`)
+## 🆘 Hilfsfrist-Relevanz
 
-### Ausrückezeit
-Zeit von Alarm bis Ausrücken (≤ 90s)
+Nicht alle Einsätze sind hilfsfristrelevant. Folgende Einsatztypen sind **ausgeschlossen**:
+- Krankentransport
+- Verlegung
+- Fehlalarm
+- Sonstiges ohne Notfall
 
-### Anfahrtszeit
-Zeit von Ausrücken bis Eintreffen (≤ 8min)
+## 📝 Version
 
-### Hilfsfrist
-Gesamterfüllung (Ausrücke- UND Anfahrtszeit erreicht)
+**Version 7** (November 2024)
 
-## 🎨 Design-Verbesserungen V7
+Änderungen zu V6:
+- ✅ Granulare Histogramme (10s bzw. 1min Schritte)
+- ✅ Kompaktes Datumsformat
+- ✅ Zeitfilter "Aktuelle Schicht"
+- ✅ Anfahrtszeit-Schwellenwert korrigiert (5 Minuten)
+- ✅ Professionelles Dashboard-Design
+- ✅ 90% Perzentil-KPIs
+- ✅ Tagesverlauf-Heatmap
+- ✅ Ampelschema-Alarme
+- ✅ Chart-Interaktionen
+- ✅ Tabellen-Toggle
 
-### Granulare Histogramme
-- **Ausrückezeit**: 10-Sekunden-Schritte (0-10s, 10-20s, ..., >90s)
-- **Anfahrtszeit**: 1-Minuten-Schritte (0-1min, 1-2min, ..., >8min)
+## 🤝 Support
 
-### Kompaktes Datumsformat
-Zeitreihen-Labels im Format: `DD.MM HH:mm`
+Bei Fragen oder Problemen:
+1. Prüfen Sie die Browser-Konsole (F12) auf Fehlermeldungen
+2. Stellen Sie sicher, dass Zugriff auf ArcGIS Feature Services besteht
+3. Testen Sie mit einem anderen Browser
 
-### Schicht-Filter
-Neuer Zeitfilter "Aktuelle Schicht" zeigt Daten von 07:00 Uhr des aktuellen Tages bis 07:00 Uhr des Folgetages.
+## 📜 Lizenz
 
-## 🏛️ Architektur
-
-### Service Layer
-- **arcgis.service.ts**: API-Kommunikation mit ArcGIS Feature Services
-- **data-processor.service.ts**: Datenverarbeitung, KPI-Berechnung, Aggregation
-- **export.service.ts**: CSV-Export-Funktionalität
-
-### Component Layer
-- **filters.ts**: Zeit- und RTW-Filter-Logik
-- **kpi-cards.ts**: KPI-Anzeige und -Aktualisierung
-- **charts.ts**: Chart.js Visualisierungen (Line, Bar, Pie)
-- **table.ts**: Tabellarische Detailansicht
-
-### Utils Layer
-- **constants.ts**: Zentrale Konfiguration und Konstanten
-- **helpers.ts**: Wiederverwendbare Hilfsfunktionen
-
-## 🔄 State Management
-
-Zentrales State-Objekt in `main.ts`:
-```typescript
-{
-  processedData: ProcessedEinsatz[],
-  autoRefreshTimer: number | null
-}
-```
-
-## 🧪 TypeScript
-
-Vollständig typisierte Codebasis mit:
-- Strict Mode aktiviert
-- Detaillierte Interfaces für alle Datenstrukturen
-- Type Guards für sichere Type-Narrowing
-- Generics für wiederverwendbare Funktionen
-
-## 📝 Lizenz
-
-Hamburger Feuerwehr - Internes Tool
-
-## 👥 Entwicklung
-
-### Code Style
-- ESModules (ES2020)
-- Strict TypeScript
-- Funktionale Programmierung wo möglich
-- JSDoc-Kommentare für Public APIs
-
-### Best Practices
-- Single Responsibility Principle
-- Separation of Concerns
-- DRY (Don't Repeat Yourself)
-- Type Safety First
-
-## 🐛 Bekannte Probleme
-
-Keine bekannten Probleme in V7.
-
-## 📞 Support
-
-Bei Fragen oder Problemen wenden Sie sich an das Entwicklerteam.
+Für den internen Gebrauch der Hamburger Feuerwehr.
 
 ---
 
-**Version**: 7.0.0
-**Letzte Aktualisierung**: 2024
-**Status**: Production Ready ✅
+**Letzte Aktualisierung:** 08. November 2024
