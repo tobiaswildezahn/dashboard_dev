@@ -1,25 +1,48 @@
 // ============================================================================
 // FILE: js/08-ui-modal.js
 // Event Details Modal
-// Dependencies: state
+// Dependencies: state, escapeHtml
 // Requires: esriRequest from ArcGIS API (AMD)
 // ============================================================================
 
+/**
+ * ÖFFNET MODAL MIT EINSATZDETAILS
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Zeigt ein Popup-Fenster mit detaillierten Informationen zu einem Einsatz
+ * - Lädt Daten zuerst aus Cache (schnell), dann von API (fallback)
+ * - Escaped ALLE Benutzerdaten um XSS-Angriffe zu verhindern
+ * - Zeigt Loading-Spinner während Daten geladen werden
+ *
+ * SICHERHEITSMASSNAHMEN:
+ * - escapeHtml() für funkrufname, einsatzstichwort und alle Felder
+ * - Verhindert XSS durch gefährliche Zeichen in Einsatzdaten
+ *
+ * ABLAUF:
+ * 1. Modal sofort öffnen mit Loading-Anzeige
+ * 2. Titel mit gecachten Daten setzen (schnell)
+ * 3. Details von API laden
+ * 4. Modal-Inhalt aktualisieren
+ *
+ * @param {number} eventId - Die ID des anzuzeigenden Einsatzes
+ */
 async function openEventDetailsModal(eventId) {
     const modal = document.getElementById('eventDetailsModal');
     const modalBody = document.getElementById('modalBodyContent');
     const modalTitle = document.querySelector('#eventDetailsModal .modal-title');
 
     // Schneller Lookup für Titel
-    const cachedItem = state.processedData.find(function(item) { return item.idevent == eventId; });
-    const funkrufname = cachedItem ? (cachedItem.call_sign || 'Einsatz') : 'Einsatz';
-    const einsatzstichwort = cachedItem ? (cachedItem.nameeventtype || 'Wird geladen...') : 'Wird geladen...';
+    const cachedItem = state.processedData.find(function(item) { return item.idevent === eventId; });
+
+    // SICHERHEIT: escapeHtml() verhindert XSS-Angriffe
+    const funkrufname = escapeHtml(cachedItem ? cachedItem.call_sign : null);
+    const einsatzstichwort = escapeHtml(cachedItem ? cachedItem.nameeventtype : null);
 
     // Titel sofort setzen für bessere UX
     modalTitle.innerHTML = '<span>🚨</span>' +
         '<div>' +
-        '<div class="modal-title-main">' + funkrufname + '</div>' +
-        '<div class="modal-title-sub">' + einsatzstichwort + '</div>' +
+        '<div class="modal-title-main">' + (funkrufname || 'Einsatz') + '</div>' +
+        '<div class="modal-title-sub">' + (einsatzstichwort || 'Wird geladen...') + '</div>' +
         '</div>';
 
     // Modal öffnen mit Loading-Anzeige
@@ -52,9 +75,29 @@ function closeEventDetailsModal() {
 window.openEventDetailsModal = openEventDetailsModal;
 window.closeEventDetailsModal = closeEventDetailsModal;
 
+/**
+ * LÄDT EINSATZDETAILS VOM SERVER
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Versucht zuerst Daten aus lokalem Cache zu holen (schnell)
+ * - Falls nicht im Cache: Fragt ArcGIS Server API ab (langsam)
+ * - Lädt Event-Details und Resource-Details parallel
+ *
+ * WARUM CACHE:
+ * - Vermeidet unnötige Server-Anfragen
+ * - Schnellere Anzeige für Benutzer
+ * - Reduziert Server-Last
+ *
+ * WARUM FALLBACK:
+ * - Wenn Einsatz nicht in aktueller Schicht/Filter
+ * - Garantiert dass Details immer geladen werden können
+ *
+ * @param {number} eventId - Die ID des zu ladenden Einsatzes
+ * @returns {Promise<Object>} Object mit eventDetails und resourceDetails
+ */
 async function fetchEventDetails(eventId) {
     // Daten aus dem Cache (state.processedData) holen
-    const cachedData = state.processedData.find(function(item) { return item.idevent == eventId; });
+    const cachedData = state.processedData.find(function(item) { return item.idevent === eventId; });
 
     if (cachedData) {
         // Daten sind im Cache vorhanden
@@ -112,6 +155,26 @@ async function fetchEventDetails(eventId) {
     };
 }
 
+/**
+ * ZEIGT EINSATZDETAILS IM MODAL AN
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Nimmt Einsatzdaten und rendert sie in HTML
+ * - Escaped ALLE Benutzerdaten um XSS-Angriffe zu verhindern
+ * - Berechnet Einsatzdauer mit intelligenter Logik
+ * - Zeigt Adresse, Stadt, Revier, Dauer und Notrufabfrage
+ *
+ * SICHERHEITSMASSNAHMEN:
+ * - escapeHtml() für ALLE Felder (Adresse, Stadt, Revier, etc.)
+ * - Verhindert XSS durch gefährliche Zeichen in Datenbank
+ *
+ * EINSATZDAUER-LOGIK:
+ * - Priorität 1: time_finished_via_radio (Funk-Meldung)
+ * - Priorität 2: time_finished (System-Zeit)
+ * - Priorität 3: Aktuelle Zeit (wenn noch nicht beendet)
+ *
+ * @param {Object} details - Object mit eventDetails und resourceDetails
+ */
 function displayEventDetails(details) {
     const modalBody = document.getElementById('modalBodyContent');
     const eventDetails = details.eventDetails;
@@ -130,10 +193,13 @@ function displayEventDetails(details) {
         return;
     }
 
-    // Titel aktualisieren
+    // Titel aktualisieren (mit Escaping!)
     const modalTitle = document.querySelector('#eventDetailsModal .modal-title');
-    const funkrufname = resourceDetails ? (resourceDetails.call_sign || 'Unbekannt') : 'Unbekannt';
-    const einsatzstichwort = eventDetails ? (eventDetails.nameeventtype || 'Unbekannt') : 'Unbekannt';
+
+    // SICHERHEIT: escapeHtml() verhindert XSS-Angriffe
+    const funkrufname = escapeHtml(resourceDetails ? resourceDetails.call_sign : null) || 'Unbekannt';
+    const einsatzstichwort = escapeHtml(eventDetails ? eventDetails.nameeventtype : null) || 'Unbekannt';
+
     modalTitle.innerHTML = '<span>🚨</span>' +
         '<div>' +
         '<div class="modal-title-main">' + funkrufname + '</div>' +
@@ -158,20 +224,31 @@ function displayEventDetails(details) {
         einsatzdauer = Math.round(dauer) + ' Minuten';
     }
 
-    // Einsatzadresse zusammenstellen
+    // Einsatzadresse zusammenstellen (mit Escaping!)
     let einsatzadresse = 'N/A';
     if (eventDetails) {
         if (eventDetails.street1 && eventDetails.street2) {
-            einsatzadresse = eventDetails.street1 + '/' + eventDetails.street2;
+            // SICHERHEIT: escapeHtml() verhindert XSS
+            einsatzadresse = escapeHtml(eventDetails.street1) + '/' + escapeHtml(eventDetails.street2);
         } else if (eventDetails.street1) {
-            einsatzadresse = eventDetails.street1;
+            einsatzadresse = escapeHtml(eventDetails.street1);
         }
     }
 
-    // PLZ und Stadt zusammenstellen
-    const plzStadt = eventDetails && eventDetails.zipcode && eventDetails.city
-        ? (eventDetails.zipcode + ' ' + eventDetails.city)
-        : (eventDetails && eventDetails.zipcode ? eventDetails.zipcode : (eventDetails && eventDetails.city ? eventDetails.city : 'N/A'));
+    // PLZ und Stadt zusammenstellen (mit Escaping!)
+    let plzStadt = 'N/A';
+    if (eventDetails && eventDetails.zipcode && eventDetails.city) {
+        // SICHERHEIT: escapeHtml() verhindert XSS
+        plzStadt = escapeHtml(eventDetails.zipcode) + ' ' + escapeHtml(eventDetails.city);
+    } else if (eventDetails && eventDetails.zipcode) {
+        plzStadt = escapeHtml(eventDetails.zipcode);
+    } else if (eventDetails && eventDetails.city) {
+        plzStadt = escapeHtml(eventDetails.city);
+    }
+
+    // SICHERHEIT: Alle weiteren Felder escapen
+    const revier = escapeHtml(eventDetails ? eventDetails.revier_bf_ab_2018 : null) || 'Nicht verfügbar';
+    const notrufabfrage = escapeHtml(eventDetails ? eventDetails.dias_resultmedical : null) || 'Nicht verfügbar';
 
     const html = '<div class="detail-row">' +
         '<div class="detail-field">' +
@@ -191,8 +268,8 @@ function displayEventDetails(details) {
 
         '<div class="detail-field">' +
         '<div class="detail-label">Einsatzrevier</div>' +
-        '<div class="detail-value ' + (eventDetails && eventDetails.revier_bf_ab_2018 ? '' : 'empty') + '">' +
-        (eventDetails && eventDetails.revier_bf_ab_2018 ? eventDetails.revier_bf_ab_2018 : 'Nicht verfügbar') +
+        '<div class="detail-value ' + (revier === 'Nicht verfügbar' ? 'empty' : '') + '">' +
+        revier +
         '</div>' +
         '</div>' +
 
@@ -205,8 +282,8 @@ function displayEventDetails(details) {
 
         '<div class="detail-field">' +
         '<div class="detail-label">Notrufabfrage</div>' +
-        '<div class="detail-value ' + (eventDetails && eventDetails.dias_resultmedical ? '' : 'empty') + '">' +
-        (eventDetails && eventDetails.dias_resultmedical ? eventDetails.dias_resultmedical : 'Nicht verfügbar') +
+        '<div class="detail-value ' + (notrufabfrage === 'Nicht verfügbar' ? 'empty' : '') + '">' +
+        notrufabfrage +
         '</div>' +
         '</div>';
 
