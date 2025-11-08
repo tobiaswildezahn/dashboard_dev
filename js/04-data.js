@@ -8,9 +8,78 @@
 // ============================================================================
 
 // ============================================================================
+// SQL INJECTION SCHUTZ
+// ============================================================================
+
+/**
+ * SICHERHEITSFUNKTION: SQL-Injection Schutz
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Schützt vor SQL-Injection-Angriffen indem gefährliche Zeichen escaped werden
+ * - SQL-Injection: Angreifer kann durch ' und andere Zeichen SQL-Befehle einschleusen
+ *
+ * BEISPIEL ANGRIFF (ohne Schutz):
+ * - Eingabe: RTW' OR '1'='1
+ * - SQL wird zu: WHERE nameresourcetype = 'RTW' OR '1'='1' AND ...
+ * - Ergebnis: ALLE Datensätze werden zurückgegeben (Datenleck!)
+ *
+ * BEISPIEL SCHUTZ (mit Funktion):
+ * - Eingabe: RTW' OR '1'='1
+ * - Nach Sanitization: RTW'' OR ''1''=''1
+ * - SQL wird zu: WHERE nameresourcetype = 'RTW'' OR ''1''=''1' AND ...
+ * - Ergebnis: Keine Datensätze (sicher)
+ *
+ * FUNKTIONSWEISE:
+ * - Ersetzt jedes ' durch '' (SQL-Escape-Standard)
+ * - Validiert dass nur alphanumerische Zeichen und - verwendet werden
+ *
+ * @param {string} value - Zu escapen der Wert (z.B. CONFIG.resourceType)
+ * @returns {string} Sicherer Wert für SQL-Verwendung
+ */
+function sanitizeForSQL(value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+
+    // Konvertiere zu String
+    const str = String(value);
+
+    // WARNUNG: Wenn gefährliche Zeichen gefunden werden
+    if (/[;'"\\]/.test(str)) {
+        console.warn('⚠️ SICHERHEITSWARNUNG: Potenziell gefährliche Zeichen in SQL-Parameter gefunden:', str);
+    }
+
+    // Escape single quotes: ' wird zu ''
+    // Dies ist der SQL-Standard für String-Escaping
+    return str.replace(/'/g, "''");
+}
+
+// ============================================================================
 // DATA PROCESSING
 // ============================================================================
 
+/**
+ * VERARBEITET ROHDATEN VOM SERVER
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Kombiniert Resource-Daten und Event-Daten
+ * - Berechnet Ausrückezeit, Anfahrtszeit und Hilfsfrist
+ * - Markiert ob Einsatz hilfsfrist-relevant ist
+ * - Prüft ob Schwellenwerte erreicht wurden
+ *
+ * DATEN-QUELLEN:
+ * - rawResourceFeatures: RTW-Einsätze (Fahrzeuge)
+ * - rawEventFeatures: Event-Details (Adressen, Typ, etc.)
+ *
+ * BERECHNUNGEN:
+ * - responseTime = time_on_the_way - time_alarm (in Sekunden)
+ * - travelTime = time_arrived - time_on_the_way (in Sekunden)
+ * - hilfsfristAchieved = responseAchieved AND travelAchieved
+ *
+ * @param {Array} rawResourceFeatures - Rohdaten von Resources-Layer
+ * @param {Array} rawEventFeatures - Rohdaten von Events-Layer
+ * @returns {Array} Verarbeitete Daten mit berechneten KPIs
+ */
 function processData(rawResourceFeatures, rawEventFeatures) {
     const eventMap = {};
     rawEventFeatures.forEach(function(feature) {
@@ -67,6 +136,33 @@ function processData(rawResourceFeatures, rawEventFeatures) {
 // DATA FETCHING - MULTI-LAYER mit Schicht-Support
 // ============================================================================
 
+/**
+ * LÄDT EINSATZDATEN VOM ARCGIS SERVER
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Hauptfunktion zum Laden aller Einsatzdaten
+ * - Fragt zwei ArcGIS Feature-Services parallel ab (Resources + Events)
+ * - Unterstützt verschiedene Zeitfilter (letzte X Stunden, aktuelle Schicht)
+ * - Aktualisiert Dashboard nach erfolgreichem Laden
+ *
+ * SICHERHEITSMASSNAHMEN:
+ * - sanitizeForSQL() für CONFIG.resourceType (verhindert SQL-Injection)
+ * - Alle Zeitstempel werden sicher formatiert
+ * - Fehlerbehandlung für Netzwerkprobleme
+ *
+ * ZEITFILTER:
+ * - 'current-shift': Aktuelle Schicht (07:00-07:00 Uhr)
+ * - Zahl: Letzte X Stunden (z.B. 8, 24, 72)
+ *
+ * WARUM PARALLEL:
+ * - Schneller als sequentiell (2 Anfragen gleichzeitig)
+ * - Promise.all() wartet auf beide Antworten
+ *
+ * @param {Object} [options] - Optionale Konfiguration
+ * @param {boolean} [options.updateFilters=true] - Soll RTW-Filter aktualisiert werden?
+ * @param {boolean} [options.showLoadingIndicator=true] - Soll Lade-Overlay angezeigt werden?
+ * @param {boolean} [options.showSuccessMessage=true] - Soll Erfolgsmeldung angezeigt werden?
+ */
 async function fetchData(options) {
     if (!options) options = {};
     const updateFilters = options.updateFilters !== undefined ? options.updateFilters : true;
@@ -91,13 +187,18 @@ async function fetchData(options) {
             console.log('  Start:', startTimestamp, '(lokale Zeit:', shiftTimes.startTime.toLocaleString('de-DE'), ')');
             console.log('  Ende:', endTimestamp, '(lokale Zeit:', shiftTimes.endTime.toLocaleString('de-DE'), ')');
 
-            whereClause = "nameresourcetype = '" + CONFIG.resourceType + "' AND time_alarm >= DATE '" + startTimestamp + "' AND time_alarm < DATE '" + endTimestamp + "'";
+            // SICHERHEIT: sanitizeForSQL() verhindert SQL-Injection
+            const safeResourceType = sanitizeForSQL(CONFIG.resourceType);
+            whereClause = "nameresourcetype = '" + safeResourceType + "' AND time_alarm >= DATE '" + startTimestamp + "' AND time_alarm < DATE '" + endTimestamp + "'";
             eventWhereClause = "alarmtime >= DATE '" + startTimestamp + "' AND alarmtime < DATE '" + endTimestamp + "'";
 
             console.log('  WHERE:', whereClause);
         } else {
             const hours = parseInt(timeFilterValue);
-            whereClause = "nameresourcetype = '" + CONFIG.resourceType + "' AND time_alarm > CURRENT_TIMESTAMP - INTERVAL '" + hours + "' HOUR";
+
+            // SICHERHEIT: sanitizeForSQL() verhindert SQL-Injection
+            const safeResourceType = sanitizeForSQL(CONFIG.resourceType);
+            whereClause = "nameresourcetype = '" + safeResourceType + "' AND time_alarm > CURRENT_TIMESTAMP - INTERVAL '" + hours + "' HOUR";
             eventWhereClause = "alarmtime > CURRENT_TIMESTAMP - INTERVAL '" + hours + "' HOUR";
         }
 

@@ -8,6 +8,29 @@
 // RTW PICKER
 // ============================================================================
 
+/**
+ * EXTRAHIERT EINDEUTIGE RTW-NAMEN AUS DATEN
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Durchsucht alle Einsatzdaten nach Fahrzeug-Namen
+ * - Verwendet Set() um Duplikate automatisch zu entfernen
+ * - Sortiert alphabetisch für bessere Übersicht
+ *
+ * FUNKTIONSWEISE:
+ * 1. Erstelle leeres Set (speichert nur eindeutige Werte)
+ * 2. Durchlaufe alle Einsätze
+ * 3. Füge call_sign zum Set hinzu (Duplikate werden ignoriert)
+ * 4. Konvertiere Set zu Array
+ * 5. Sortiere alphabetisch
+ *
+ * WARUM SET:
+ * - Set speichert automatisch nur eindeutige Werte
+ * - Schneller als manuelles Prüfen auf Duplikate
+ * - Moderner JavaScript-Standard
+ *
+ * @param {Array} data - Array von Einsatzdaten
+ * @returns {Array<string>} Sortiertes Array eindeutiger RTW-Namen
+ */
 function extractUniqueRtw(data) {
     const rtwSet = new Set();
     data.forEach(function(item) {
@@ -18,6 +41,30 @@ function extractUniqueRtw(data) {
     return Array.from(rtwSet).sort();
 }
 
+/**
+ * BEFÜLLT RTW-PICKER MIT CHECKBOXEN
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Erstellt für jeden RTW eine Checkbox im Filter-Bereich
+ * - Erhält Auswahl-Status von vorheriger Filterung
+ * - Registriert Event-Listener für jede Checkbox
+ *
+ * ABLAUF:
+ * 1. Lösche alten Inhalt des Grids
+ * 2. Für jeden RTW:
+ *    - Erstelle Checkbox
+ *    - Setze checked-Status (basierend auf state.selectedRtwList)
+ *    - Erstelle Label
+ *    - Registriere onChange Event
+ *    - Füge zu Grid hinzu
+ * 3. Aktualisiere Zähler
+ *
+ * CHECKBOX-STATUS:
+ * - Wenn selectedRtwList leer: Alle Checkboxen aktiviert (= alle ausgewählt)
+ * - Wenn selectedRtwList gefüllt: Nur enthaltene RTWs aktiviert
+ *
+ * @param {Array<string>} rtwList - Array von RTW-Namen
+ */
 function populateRtwPicker(rtwList) {
     const grid = document.getElementById('rtwCheckboxGrid');
     grid.innerHTML = '';
@@ -45,6 +92,27 @@ function populateRtwPicker(rtwList) {
     updateRtwSelectedCount();
 }
 
+/**
+ * REAGIERT AUF RTW-AUSWAHL-ÄNDERUNGEN
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Wird aufgerufen wenn Benutzer Checkbox an/abwählt
+ * - Aktualisiert globalen State mit neuer Auswahl
+ * - Triggert Dashboard-Neuberechnung mit gefilterten Daten
+ *
+ * ABLAUF:
+ * 1. Finde alle RTW-Checkboxen
+ * 2. Filtere nur angehakte Checkboxen
+ * 3. Extrahiere deren Werte (RTW-Namen)
+ * 4. Speichere in state.selectedRtwList
+ * 5. Aktualisiere Zähler-Anzeige
+ * 6. Aktualisiere gesamtes Dashboard
+ *
+ * WARUM WICHTIG:
+ * - Ermöglicht Filterung nach spezifischen Fahrzeugen
+ * - Reduziert angezeigte Daten für bessere Übersicht
+ * - Kann einzelne RTWs analysieren
+ */
 function onRtwSelectionChange() {
     const checkboxes = document.querySelectorAll('#rtwCheckboxGrid input[type="checkbox"]');
     state.selectedRtwList = Array.from(checkboxes)
@@ -55,6 +123,23 @@ function onRtwSelectionChange() {
     updateDashboard();
 }
 
+/**
+ * AKTUALISIERT ANZEIGE DER AUSGEWÄHLTEN RTW-ANZAHL
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Zeigt wie viele RTWs aktuell ausgewählt sind
+ * - Spezialfall: Wenn alle oder keine ausgewählt, zeige "(Alle ausgewählt)"
+ * - Sonst zeige z.B. "(3 von 10 ausgewählt)"
+ *
+ * BEISPIELE:
+ * - 0 von 5 ausgewählt → "(Alle ausgewählt)"
+ * - 5 von 5 ausgewählt → "(Alle ausgewählt)"
+ * - 3 von 5 ausgewählt → "(3 von 5 ausgewählt)"
+ *
+ * WARUM "ALLE BEI 0":
+ * - Leere Auswahl = keine Filterung = alle Daten
+ * - Benutzer-freundlicher als "0 ausgewählt"
+ */
 function updateRtwSelectedCount() {
     const total = document.querySelectorAll('#rtwCheckboxGrid input[type="checkbox"]').length;
     const selected = state.selectedRtwList.length;
@@ -87,6 +172,26 @@ function deselectAllRtw() {
     onRtwSelectionChange();
 }
 
+/**
+ * FILTERT DATEN NACH AUSGEWÄHLTEN RTWs
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Zentrale Filter-Funktion für RTW-Auswahl
+ * - Gibt nur Einsätze zurück die zu ausgewählten RTWs gehören
+ * - Spezialfall: Leere Auswahl = keine Filterung (alle Daten)
+ *
+ * LOGIK:
+ * - selectedRtwList leer: Gib ALLE Daten zurück
+ * - selectedRtwList gefüllt: Gib nur Daten zurück wo call_sign in Liste
+ *
+ * VERWENDUNG:
+ * - updateDashboard() filtert damit vor KPI-Berechnung
+ * - exportCSV() filtert damit vor Export
+ * - Jede Funktion die nur ausgewählte RTWs braucht
+ *
+ * @param {Array} data - Ungefilterte Einsatzdaten
+ * @returns {Array} Gefilterte Daten (nur ausgewählte RTWs)
+ */
 function filterBySelectedRtw(data) {
     if (state.selectedRtwList.length === 0) {
         return data;
@@ -98,6 +203,43 @@ function filterBySelectedRtw(data) {
 // EXPORT - MIT NAMEEVENTTYPE UND HILFSFRIST-RELEVANZ
 // ============================================================================
 
+/**
+ * EXPORTIERT DATEN ALS CSV-DATEI
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Erstellt CSV-Datei mit allen relevanten Einsatzdaten
+ * - Berücksichtigt RTW-Filter (nur ausgewählte Fahrzeuge)
+ * - Verwendet UTF-8 mit BOM für Excel-Kompatibilität
+ * - Automatischer Download im Browser
+ *
+ * CSV-SPALTEN:
+ * 1. RTW: Fahrzeug-Rufname
+ * 2. Einsatztyp: z.B. "Notfall-Rettung"
+ * 3. Hilfsfrist-Relevant: Ja/Nein
+ * 4. Alarmzeit: Formatiert als DD.MM.YYYY HH:MM
+ * 5. Ausrückezeit (s): In Sekunden
+ * 6. Ausrückezeit OK: Ja/Nein/N/A
+ * 7. Anfahrtszeit (s): In Sekunden
+ * 8. Anfahrtszeit OK: Ja/Nein/N/A
+ * 9. Hilfsfrist erreicht: Ja/Nein/N/A
+ * 10. Event ID: Eindeutige Einsatz-ID
+ *
+ * DATEINAME:
+ * - Format: rtw_hilfsfrist_YYYY-MM-DD.csv
+ * - Beispiel: rtw_hilfsfrist_2025-11-08.csv
+ *
+ * SONDERZEICHEN:
+ * - Semikolons in Daten werden durch Kommas ersetzt
+ * - Einsatztyp in Anführungszeichen (kann Sonderzeichen enthalten)
+ * - UTF-8 BOM (﻿) für korrekte Umlaute in Excel
+ *
+ * WARUM WICHTIG:
+ * - Datenanalyse in Excel möglich
+ * - Langzeit-Archivierung
+ * - Berichte für Management
+ *
+ * @throws Zeigt Fehlermeldung wenn keine Daten verfügbar
+ */
 function exportCSV() {
     const data = filterBySelectedRtw(state.processedData);
 
