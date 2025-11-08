@@ -18,6 +18,7 @@ Dieses Dashboard analysiert und visualisiert die Performance von Rettungswagen b
 ✅ **Detaillierte Einsatzliste** mit Sortierung und Event-Details-Modal
 ✅ **RTW-Filter** zur Analyse einzelner Fahrzeuge
 ✅ **Zeitfilter** inkl. "Aktuelle Schicht" (07:00-07:00 Uhr)
+✅ **Automatische Pagination** - Lädt ALLE Einsätze auch bei 48h/72h Zeiträumen (>3000 Einsätze)
 ✅ **CSV-Export** für weitere Analysen
 ✅ **Auto-Refresh** alle 30 Sekunden
 ✅ **Modulare Architektur** für bessere Wartbarkeit
@@ -180,14 +181,26 @@ Module werden in numerischer Reihenfolge geladen (01 → 10). Abhängigkeiten:
 
 ## 📝 Version
 
-**Version 7.1 - Modular Edition** (November 2025)
+**Version 7.3 - Production Edition** (November 2025)
+
+Änderungen zu V7.2:
+- ✅ **Automatische Pagination** für Feature Service Abfragen
+- ✅ Lädt ALLE Einsätze auch bei großen Zeiträumen (48h/72h = ~3000 Einsätze)
+- ✅ Behebt N/A-Werte bei Event-Daten durch vollständiges Laden
+- ✅ Console-Logging für Pagination-Debugging
+- ✅ Sicherheits-Limit bei 10.000 Features
+
+Änderungen zu V7.1:
+- ✅ Umfassende Sicherheitsfixes (XSS, SQL Injection, Type Coercion)
+- ✅ Deutsche JSDoc-Dokumentation für alle 33 Funktionen
+- ✅ Laien-freundliche Code-Kommentare
+- ✅ DOCUMENTATION.md v3.0 (3550 Zeilen)
 
 Änderungen zu V7.0:
 - ✅ Modulare Architektur (9 CSS + 10 JS Module)
 - ✅ file:// Protokoll kompatibel
 - ✅ Bessere Wartbarkeit
 - ✅ Klare Trennung von Verantwortlichkeiten
-- ✅ README.md aktualisiert
 
 Änderungen zu V6:
 - ✅ Granulare Histogramme (10s bzw. 1min Schritte)
