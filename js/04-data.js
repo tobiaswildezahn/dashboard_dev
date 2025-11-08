@@ -55,6 +55,90 @@ function sanitizeForSQL(value) {
 }
 
 // ============================================================================
+// DATA FETCHING WITH PAGINATION
+// ============================================================================
+
+/**
+ * LÄDT ALLE FEATURES MIT AUTOMATISCHER PAGINATION
+ *
+ * PROBLEM:
+ * - ArcGIS Feature Services haben ein maxRecordCount Limit (typisch 1000-2000)
+ * - Bei mehr Features werden nur die ersten zurückgegeben
+ * - exceedsTransferLimit = true signalisiert dass mehr Daten existieren
+ *
+ * LÖSUNG:
+ * - Mehrere Requests mit resultOffset (0, 1000, 2000, ...)
+ * - Sammelt alle Features in einem Array
+ * - Garantiert dass ALLE Daten geladen werden
+ *
+ * WICHTIG FÜR 72h FILTER:
+ * - 3000 Einsätze in 72h sind normal
+ * - Ohne Pagination würden 1000-2000 Features fehlen
+ * - Führt zu N/A Werten in Tabelle
+ *
+ * @param {string} serviceUrl - URL des Feature Service
+ * @param {string} whereClause - SQL WHERE Klausel
+ * @param {string} outFields - Komma-separierte Feldliste oder "*"
+ * @returns {Promise<Array>} Array mit ALLEN Features (keine Limits)
+ */
+async function fetchAllFeatures(serviceUrl, whereClause, outFields) {
+    let allFeatures = [];
+    let offset = 0;
+    const batchSize = 1000; // Features pro Request
+    let hasMore = true;
+
+    console.log('📊 Lade Features mit Pagination von:', serviceUrl);
+    console.log('   WHERE:', whereClause);
+
+    while (hasMore) {
+        try {
+            const response = await esriRequest(serviceUrl + "/query", {
+                query: {
+                    where: whereClause,
+                    outFields: outFields,
+                    f: "json",
+                    returnGeometry: false,
+                    resultOffset: offset,
+                    resultRecordCount: batchSize
+                },
+                responseType: "json"
+            });
+
+            if (!response.data || !response.data.features) {
+                throw new Error('Keine Daten vom Server erhalten');
+            }
+
+            const features = response.data.features;
+            allFeatures = allFeatures.concat(features);
+
+            console.log('   Batch geladen: Offset', offset, '→', features.length, 'Features (Gesamt:', allFeatures.length + ')');
+
+            // Prüfe ob mehr Daten vorhanden sind
+            if (response.data.exceededTransferLimit === true || features.length === batchSize) {
+                // Es gibt wahrscheinlich mehr Daten
+                offset += batchSize;
+            } else {
+                // Alle Daten geladen
+                hasMore = false;
+            }
+
+            // Sicherheits-Abbruch bei zu vielen Iterationen (max 10.000 Features)
+            if (offset >= 10000) {
+                console.warn('⚠️ Pagination bei 10.000 Features abgebrochen (Sicherheits-Limit)');
+                hasMore = false;
+            }
+
+        } catch (error) {
+            console.error('Fehler beim Laden von Features (Offset ' + offset + '):', error);
+            throw error;
+        }
+    }
+
+    console.log('✅ Pagination abgeschlossen:', allFeatures.length, 'Features geladen');
+    return allFeatures;
+}
+
+// ============================================================================
 // DATA PROCESSING
 // ============================================================================
 
@@ -202,37 +286,34 @@ async function fetchData(options) {
             eventWhereClause = "alarmtime > CURRENT_TIMESTAMP - INTERVAL '" + hours + "' HOUR";
         }
 
+        // WICHTIG: fetchAllFeatures() statt direktem esriRequest
+        // Lädt ALLE Features mit automatischer Pagination
+        // Verhindert N/A Werte bei großen Zeiträumen (48h, 72h)
         const responses = await Promise.all([
-            esriRequest(resourcesServiceUrl + "/query", {
-                query: {
-                    where: whereClause,
-                    outFields: "*",
-                    f: "json",
-                    returnGeometry: false
-                },
-                responseType: "json"
-            }),
-            esriRequest(eventsServiceUrl + "/query", {
-                query: {
-                    where: eventWhereClause,
-                    outFields: "id,nameeventtype,street1,street2,zipcode,city,revier_bf_ab_2018,dias_resultmedical",
-                    f: "json",
-                    returnGeometry: false
-                },
-                responseType: "json"
-            })
+            fetchAllFeatures(
+                resourcesServiceUrl,
+                whereClause,
+                "*"  // Alle Felder
+            ),
+            fetchAllFeatures(
+                eventsServiceUrl,
+                eventWhereClause,
+                "id,nameeventtype,street1,street2,zipcode,city,revier_bf_ab_2018,dias_resultmedical"
+            )
         ]);
 
-        const resourceResponse = responses[0];
-        const eventResponse = responses[1];
+        const resourceFeatures = responses[0];
+        const eventFeatures = responses[1];
 
-        if (!resourceResponse.data || !resourceResponse.data.features) {
-            throw new Error('Keine Daten vom Server erhalten');
+        if (!resourceFeatures || resourceFeatures.length === 0) {
+            throw new Error('Keine Resource-Daten vom Server erhalten');
         }
 
+        // processData erwartet Features mit .attributes Property
+        // fetchAllFeatures gibt bereits die Feature-Objekte zurück
         state.processedData = processData(
-            resourceResponse.data.features,
-            eventResponse.data.features
+            resourceFeatures,
+            eventFeatures || []
         );
 
         if (updateFilters) {
