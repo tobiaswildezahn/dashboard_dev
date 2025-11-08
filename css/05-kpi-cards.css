@@ -1,0 +1,173 @@
+/* RTW Hilfsfrist Dashboard - KPI Cards */
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.kpi-card {
+    background: white;
+    border-radius: 8px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+    border-left: 3px solid var(--primary-color);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.kpi-card.info {
+    border-left-color: var(--info-color);
+}
+
+.kpi-card.success {
+    border-left-color: var(--success-color);
+}
+
+.kpi-card.warning {
+    border-left-color: var(--warning-color);
+}
+
+.kpi-card:hover {
+    box-shadow: var(--shadow-md);
+    border-left-width: 4px;
+}
+
+/* Traffic Light Status */
+.kpi-card.kpi-status-green {
+    border-left-color: var(--success-color);
+    background: linear-gradient(to right, rgba(16, 185, 129, 0.03), white);
+}
+
+.kpi-card.kpi-status-yellow {
+    border-left-color: var(--warning-color);
+    background: linear-gradient(to right, rgba(245, 158, 11, 0.03), white);
+}
+
+.kpi-card.kpi-status-red {
+    border-left-color: var(--danger-color);
+    background: linear-gradient(to right, rgba(239, 68, 68, 0.03), white);
+}
+
+.kpi-status-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 24px;
+    animation: pulse-slow 3s ease-in-out infinite;
+}
+
+@keyframes pulse-slow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+.kpi-threshold-info {
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: var(--gray-50);
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--gray-600);
+    border-left: 2px solid var(--gray-300);
+}
+
+.kpi-threshold-info.threshold-green {
+    background: rgba(16, 185, 129, 0.05);
+    border-left-color: var(--success-color);
+    color: #059669;
+}
+
+.kpi-threshold-info.threshold-yellow {
+    background: rgba(245, 158, 11, 0.05);
+    border-left-color: var(--warning-color);
+    color: #d97706;
+}
+
+.kpi-threshold-info.threshold-red {
+    background: rgba(239, 68, 68, 0.05);
+    border-left-color: var(--danger-color);
+    color: #dc2626;
+}
+
+.kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding-right: 36px; /* Space for status badge */
+}
+
+.kpi-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kpi-icon {
+    font-size: 20px;
+    opacity: 0.6;
+}
+
+.kpi-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.kpi-value-large {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1;
+    margin-bottom: 10px;
+}
+
+.kpi-label {
+    font-size: 12px;
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
+.kpi-breakdown {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--gray-200);
+}
+
+.kpi-breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+}
+
+.kpi-breakdown-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-600);
+}
+
+.kpi-breakdown-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.kpi-breakdown-number {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.kpi-breakdown-percentage {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-500);
+}

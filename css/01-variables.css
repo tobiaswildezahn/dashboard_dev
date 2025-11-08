@@ -1,0 +1,20 @@
+/* RTW Hilfsfrist Dashboard - Design Tokens */
+:root {
+    --primary-color: #c8102e;
+    --primary-dark: #a00d25;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --info-color: #3b82f6;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    --shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 2px 4px 0 rgb(0 0 0 / 0.06);
+}

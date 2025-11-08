@@ -11,14 +11,15 @@
 
 1. [Executive Summary](#executive-summary)
 2. [System Architecture](#system-architecture)
-3. [Data Model](#data-model)
-4. [ArcGIS API Integration](#arcgis-api-integration)
-5. [Authentication & Security](#authentication--security)
-6. [Design Principles](#design-principles)
-7. [Code Structure](#code-structure)
-8. [Performance Metrics & KPIs](#performance-metrics--kpis)
-9. [Extension Points](#extension-points)
-10. [Deployment](#deployment)
+3. [Modular Architecture](#modular-architecture)
+4. [Data Model](#data-model)
+5. [ArcGIS API Integration](#arcgis-api-integration)
+6. [Authentication & Security](#authentication--security)
+7. [Design Principles](#design-principles)
+8. [Code Structure](#code-structure)
+9. [Performance Metrics & KPIs](#performance-metrics--kpis)
+10. [Extension Points](#extension-points)
+11. [Deployment](#deployment)
 
 ---
 
@@ -41,18 +42,22 @@ Frontend:     Vanilla JavaScript (ES6), AMD Module Pattern
 UI Framework: None (Custom CSS)
 Charts:       Chart.js 4.4.0
 Geospatial:   ArcGIS JavaScript API 4.33
-Deployment:   Single HTML file, file:// protocol compatible
+Architecture: Modular (9 CSS + 10 JS modules)
+Deployment:   file:// protocol compatible, no build process
+Entry Point:  index.html (modular) / dashboard.html (legacy standalone)
 ```
 
 ### Constraints & Design Decisions
 
 **Critical Constraint:** No local HTTP server or npm installation permitted in deployment environment.
 
-**Solution:** Standalone HTML file with:
-- AMD modules (not ES6) for file:// compatibility
-- Inline CSS and JavaScript
-- CDN-loaded dependencies
-- No build process
+**Solution:** Modular architecture with file:// compatibility:
+- Classic script tags (not ES6 modules) for file:// protocol support
+- Modular CSS (9 files) and JavaScript (10 files) for maintainability
+- AMD wrapper for ArcGIS API integration
+- CDN-loaded dependencies (Chart.js, ArcGIS API)
+- No build process required
+- Legacy standalone version (dashboard.html) available as fallback
 
 ---
 
@@ -64,30 +69,38 @@ Deployment:   Single HTML file, file:// protocol compatible
 ┌─────────────────────────────────────────────────────────────┐
 │                     Browser (file://)                        │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │              dashboard.html                             │ │
+│  │         index.html (Modular Entry Point)                │ │
+│  │                                                          │ │
 │  │  ┌──────────────────────────────────────────────────┐  │ │
-│  │  │  Configuration Layer                              │  │ │
+│  │  │  Configuration Layer (01-config.js)              │  │ │
 │  │  │  - CONFIG object                                  │  │ │
 │  │  │  - API endpoints                                  │  │ │
 │  │  │  - Thresholds                                     │  │ │
 │  │  └──────────────────────────────────────────────────┘  │ │
 │  │  ┌──────────────────────────────────────────────────┐  │ │
-│  │  │  Data Layer                                       │  │ │
+│  │  │  Data Layer (02-state.js, 04-data.js)            │  │ │
 │  │  │  - fetchData() - API calls                       │  │ │
 │  │  │  - processData() - Transformation                │  │ │
 │  │  │  - State management                              │  │ │
 │  │  └──────────────────────────────────────────────────┘  │ │
 │  │  ┌──────────────────────────────────────────────────┐  │ │
-│  │  │  Business Logic Layer                             │  │ │
+│  │  │  Business Logic Layer (03-calculations.js)       │  │ │
 │  │  │  - calculateKPIs()                               │  │ │
 │  │  │  - calculatePercentile()                         │  │ │
 │  │  │  - isHilfsfristRelevant()                        │  │ │
 │  │  └──────────────────────────────────────────────────┘  │ │
 │  │  ┌──────────────────────────────────────────────────┐  │ │
-│  │  │  Presentation Layer                               │  │ │
+│  │  │  Presentation Layer (05-09 UI modules)           │  │ │
 │  │  │  - updateKPIs() - Cards with traffic lights     │  │ │
 │  │  │  - updateCharts() - 4 visualizations            │  │ │
 │  │  │  - updateTable() - Detailed records             │  │ │
+│  │  │  - updateModal() - Event details                │  │ │
+│  │  │  - updateFilters() - Controls                    │  │ │
+│  │  └──────────────────────────────────────────────────┘  │ │
+│  │  ┌──────────────────────────────────────────────────┐  │ │
+│  │  │  Orchestration (10-main.js)                      │  │ │
+│  │  │  - init() - Initialization                       │  │ │
+│  │  │  - Event listeners                               │  │ │
 │  │  └──────────────────────────────────────────────────┘  │ │
 │  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
@@ -113,9 +126,12 @@ Deployment:   Single HTML file, file:// protocol compatible
 ### Data Flow
 
 ```
-1. User Opens Dashboard (file://dashboard.html)
+1. User Opens Dashboard (file://index.html or file://dashboard.html)
    ↓
-2. AMD Module Loader (require.js via ArcGIS API)
+2. Browser Loads Modular Resources:
+   - CSS Modules (01-variables.css → 09-responsive.css)
+   - JS Modules (01-config.js → 10-main.js)
+   - AMD Module Loader (require.js via ArcGIS API)
    ↓
 3. init() → fetchData()
    ↓
@@ -139,6 +155,260 @@ Deployment:   Single HTML file, file:// protocol compatible
    - updateTable() → Tabular display
    ↓
 9. Auto-refresh Timer (30s) → Loop to step 3
+```
+
+---
+
+## Modular Architecture
+
+### Overview
+
+The RTW Hilfsfrist Dashboard has been refactored from a monolithic single-file application (dashboard.html - 2788 lines) into a modular architecture while maintaining full compatibility with the file:// protocol.
+
+**Key Design Goals:**
+- Improved maintainability through separation of concerns
+- Support for parallel development by multiple developers
+- Reduced merge conflicts via smaller, focused files
+- Preserved file:// protocol compatibility (no HTTP server required)
+- Zero build process requirement
+
+### Architecture Comparison
+
+```
+BEFORE (Monolithic):                AFTER (Modular):
+┌─────────────────────────┐        ┌──────────────────────────┐
+│   dashboard.html        │        │    index.html            │
+│   (2788 lines)          │        │    (Main Entry Point)    │
+│                         │        │                          │
+│  ┌──────────────────┐  │        │  ┌────────────────────┐  │
+│  │ Inline CSS       │  │   →    │  │ CSS Modules (9)    │  │
+│  │ (~700 lines)     │  │        │  │ Linked via <link>  │  │
+│  └──────────────────┘  │        │  └────────────────────┘  │
+│  ┌──────────────────┐  │        │  ┌────────────────────┐  │
+│  │ Inline JS        │  │   →    │  │ JS Modules (10)    │  │
+│  │ (~2000 lines)    │  │        │  │ Linked via <script>│  │
+│  └──────────────────┘  │        │  └────────────────────┘  │
+└─────────────────────────┘        └──────────────────────────┘
+```
+
+### CSS Module Structure (9 Files)
+
+The stylesheet has been decomposed into a layered cascade:
+
+| File | Lines | Responsibility |
+|------|-------|----------------|
+| **01-variables.css** | ~50 | CSS custom properties (colors, shadows, spacing) |
+| **02-base.css** | ~80 | Global resets, typography, base element styles |
+| **03-header.css** | ~60 | Dashboard header, title, and status indicator |
+| **04-filters.css** | ~120 | Time filter, RTW picker, shift selector |
+| **05-kpi-cards.css** | ~180 | KPI cards, traffic lights, status badges |
+| **06-charts.css** | ~90 | Chart containers, canvas styling, grid layout |
+| **07-table.css** | ~140 | Data table, sortable headers, row interactions |
+| **08-modal.css** | ~110 | Event details modal, overlay, animations |
+| **09-responsive.css** | ~70 | Media queries, mobile adaptations |
+
+**Load Order:**
+```html
+<link rel="stylesheet" href="css/01-variables.css">
+<link rel="stylesheet" href="css/02-base.css">
+<link rel="stylesheet" href="css/03-header.css">
+<link rel="stylesheet" href="css/04-filters.css">
+<link rel="stylesheet" href="css/05-kpi-cards.css">
+<link rel="stylesheet" href="css/06-charts.css">
+<link rel="stylesheet" href="css/07-table.css">
+<link rel="stylesheet" href="css/08-modal.css">
+<link rel="stylesheet" href="css/09-responsive.css">
+```
+
+**Cascade Design:**
+- Variables first (foundation)
+- Base styles second (typography, resets)
+- Component-specific styles in dependency order
+- Responsive overrides last
+
+### JavaScript Module Structure (10 Files)
+
+The application logic has been separated by functional domain:
+
+| File | Lines | Responsibility |
+|------|-------|----------------|
+| **01-config.js** | ~40 | CONFIG object, API endpoints, thresholds, constants |
+| **02-state.js** | ~30 | Global state management, chart instances, data cache |
+| **03-calculations.js** | ~200 | KPI calculations, percentiles, threshold evaluations, histogram binning |
+| **04-data.js** | ~250 | ArcGIS API integration, data fetching, processData(), event joining |
+| **05-ui-kpis.js** | ~120 | KPI card updates, traffic light logic, status rendering |
+| **06-ui-charts.js** | ~400 | Chart.js integration (line, bar, pie, heatmap charts) |
+| **07-ui-table.js** | ~180 | Table rendering, sorting, pagination, export functions |
+| **08-ui-modal.js** | ~150 | Event details modal, fetchEventDetails(), displayEventDetails() |
+| **09-ui-filters.js** | ~140 | Filter controls, RTW picker, shift selector, auto-refresh |
+| **10-main.js** | ~90 | Initialization, event listeners, orchestration, init() |
+
+**Execution Order:**
+```html
+<!-- Must load in this sequence for correct dependencies -->
+<script src="js/01-config.js"></script>
+<script src="js/02-state.js"></script>
+<script src="js/03-calculations.js"></script>
+<script src="js/04-data.js"></script>
+<script src="js/05-ui-kpis.js"></script>
+<script src="js/06-ui-charts.js"></script>
+<script src="js/07-ui-table.js"></script>
+<script src="js/08-ui-modal.js"></script>
+<script src="js/09-ui-filters.js"></script>
+<script src="js/10-main.js"></script>
+```
+
+**Dependency Flow:**
+```
+01-config.js (no dependencies)
+    ↓
+02-state.js (uses CONFIG)
+    ↓
+03-calculations.js (uses CONFIG, state)
+    ↓
+04-data.js (uses CONFIG, state, calculations)
+    ↓
+05-ui-kpis.js (uses state, calculations)
+    ↓
+06-ui-charts.js (uses state, calculations)
+    ↓
+07-ui-table.js (uses state)
+    ↓
+08-ui-modal.js (uses state, data)
+    ↓
+09-ui-filters.js (uses state, data)
+    ↓
+10-main.js (orchestrates all modules)
+```
+
+### file:// Protocol Compatibility
+
+**Critical Constraint:** The dashboard must run directly from the filesystem without an HTTP server.
+
+**Technical Approach:**
+
+1. **Classic Script Tags (NOT ES6 Modules):**
+   ```html
+   <!-- ✅ Works with file:// -->
+   <script src="js/01-config.js"></script>
+
+   <!-- ❌ Fails with file:// (CORS violation) -->
+   <script type="module" src="js/01-config.js"></script>
+   ```
+
+2. **Global Scope Functions:**
+   - All functions declared at global scope (no module.exports)
+   - Accessible across all script files
+   - Load order determines availability
+
+3. **AMD Wrapper for ArcGIS API:**
+   ```javascript
+   // ArcGIS API uses AMD internally (RequireJS)
+   require([
+       "esri/request"
+   ], function(esriRequest) {
+       // All ArcGIS-dependent code here
+       // Functions still declared globally for cross-module access
+       window.fetchData = async function() { /* ... */ };
+   });
+   ```
+
+4. **No Build Process:**
+   - No webpack, rollup, or bundlers
+   - No transpilation
+   - Direct browser execution
+   - Works offline
+
+### Module Dependency Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      index.html                              │
+│                   (HTML Structure)                           │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+        ┌───────────────────┴───────────────────┐
+        ↓                                       ↓
+┌───────────────────┐                 ┌───────────────────┐
+│   CSS Modules     │                 │   JS Modules      │
+│   (Cascade)       │                 │   (Sequential)    │
+└───────────────────┘                 └───────────────────┘
+        ↓                                       ↓
+┌─────────────────┐                   ┌─────────────────┐
+│ 01-variables    │                   │ 01-config       │
+│ 02-base         │                   │ 02-state        │
+│ 03-header       │                   └─────────────────┘
+│ 04-filters      │                            ↓
+│ 05-kpi-cards    │                   ┌─────────────────┐
+│ 06-charts       │                   │ 03-calculations │
+│ 07-table        │                   └─────────────────┘
+│ 08-modal        │                            ↓
+│ 09-responsive   │                   ┌─────────────────┐
+└─────────────────┘                   │ 04-data         │
+                                      │ (ArcGIS API)    │
+                                      └─────────────────┘
+                                               ↓
+                        ┌──────────────────────┼──────────────────────┐
+                        ↓                      ↓                      ↓
+                ┌─────────────┐        ┌─────────────┐      ┌─────────────┐
+                │ 05-ui-kpis  │        │ 06-ui-charts│      │ 07-ui-table │
+                └─────────────┘        └─────────────┘      └─────────────┘
+                        ↓                      ↓                      ↓
+                        └──────────────────────┼──────────────────────┘
+                                               ↓
+                                      ┌─────────────────┐
+                                      │ 08-ui-modal     │
+                                      │ 09-ui-filters   │
+                                      └─────────────────┘
+                                               ↓
+                                      ┌─────────────────┐
+                                      │ 10-main         │
+                                      │ (init())        │
+                                      └─────────────────┘
+```
+
+### Benefits of Modular Architecture
+
+**Maintainability:**
+- Each module has a single, clear responsibility
+- Changes isolated to relevant files
+- Easier code navigation and debugging
+
+**Collaboration:**
+- Multiple developers can work on different modules simultaneously
+- Reduced merge conflicts (smaller files)
+- Clear ownership boundaries
+
+**Testability:**
+- Functions can be tested in isolation
+- Mock dependencies more easily
+- Unit test individual modules
+
+**Performance:**
+- Browser caching of individual modules
+- Parallel CSS parsing
+- Incremental updates (edit one file, not entire codebase)
+
+**Code Reusability:**
+- Calculation functions can be used in other projects
+- UI components are self-contained
+- Clear interfaces between modules
+
+### Migration Strategy
+
+**Backwards Compatibility:**
+- dashboard.html (monolithic) is archived and functional
+- index.html (modular) is the new entry point
+- Both versions use identical data models and API calls
+- Gradual migration path for existing deployments
+
+**File Preservation:**
+```
+dashboard_dev/
+├── index.html           ← NEW: Modular entry point
+├── dashboard.html       ← LEGACY: Standalone archive (still works)
+├── css/                 ← NEW: Modular stylesheets
+└── js/                  ← NEW: Modular scripts
 ```
 
 ---
@@ -865,16 +1135,52 @@ grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 
 ### File Organization
 
-**Single File Structure:**
+**Modular File Structure:**
 ```
-dashboard.html
+dashboard_dev/
+├── index.html                     # Modular Edition (Main Entry Point)
+├── dashboard.html                 # Standalone Archive (Legacy - 2788 lines)
+│
+├── css/                           # Modular Stylesheets (9 files)
+│   ├── 01-variables.css          # CSS custom properties, color palette
+│   ├── 02-base.css               # Global resets, typography
+│   ├── 03-header.css             # Dashboard header styling
+│   ├── 04-filters.css            # Filter controls, RTW picker
+│   ├── 05-kpi-cards.css          # KPI cards, traffic lights
+│   ├── 06-charts.css             # Chart containers, grid layout
+│   ├── 07-table.css              # Data table styling
+│   ├── 08-modal.css              # Event details modal
+│   └── 09-responsive.css         # Media queries, mobile adaptations
+│
+├── js/                            # Modular JavaScript (10 files)
+│   ├── 01-config.js              # Configuration, API endpoints
+│   ├── 02-state.js               # Global state management
+│   ├── 03-calculations.js        # KPI calculations, percentiles
+│   ├── 04-data.js                # ArcGIS API integration
+│   ├── 05-ui-kpis.js             # KPI card updates
+│   ├── 06-ui-charts.js           # Chart.js integration
+│   ├── 07-ui-table.js            # Table rendering, export
+│   ├── 08-ui-modal.js            # Event details modal
+│   ├── 09-ui-filters.js          # Filter controls, auto-refresh
+│   └── 10-main.js                # Initialization, orchestration
+│
+└── DOCUMENTATION.md               # This file
+```
+
+**index.html Structure (Modular Edition):**
+```
+index.html
 ├── <!DOCTYPE html>
 ├── <head>
 │   ├── Meta tags
 │   ├── Title
 │   ├── ArcGIS CSS (CDN)
 │   ├── Chart.js (CDN)
-│   └── <style> ... </style>
+│   └── Modular CSS Links (9 files)
+│       ├── <link rel="stylesheet" href="css/01-variables.css">
+│       ├── <link rel="stylesheet" href="css/02-base.css">
+│       ├── ... (all 9 CSS modules)
+│       └── <link rel="stylesheet" href="css/09-responsive.css">
 ├── <body>
 │   ├── Dashboard Container
 │   │   ├── Header
@@ -886,8 +1192,29 @@ dashboard.html
 │   ├── Loading Overlay
 │   ├── Toast Messages
 │   ├── Event Details Modal
+│   ├── <script src="ArcGIS API (CDN)">
+│   └── Modular JS Scripts (10 files)
+│       ├── <script src="js/01-config.js"></script>
+│       ├── <script src="js/02-state.js"></script>
+│       ├── ... (all 10 JS modules)
+│       └── <script src="js/10-main.js"></script>
+└── </body>
+```
+
+**dashboard.html Structure (Legacy - Standalone Archive):**
+```
+dashboard.html (Single File - 2788 lines)
+├── <!DOCTYPE html>
+├── <head>
+│   ├── Meta tags
+│   ├── Title
+│   ├── ArcGIS CSS (CDN)
+│   ├── Chart.js (CDN)
+│   └── <style> ... </style> (Inline CSS ~700 lines)
+├── <body>
+│   ├── Dashboard Container (Same as index.html)
 │   ├── <script src="ArcGIS API">
-│   └── <script>
+│   └── <script> ... </script> (Inline JS ~2000 lines)
 │       └── require(['esri/request'], function(esriRequest) {
 │           ├── CONFIGURATION
 │           ├── STATE MANAGEMENT
@@ -1706,7 +2033,9 @@ define(function() {
 
 ### Production Checklist
 
-- [x] Single HTML file (dashboard.html)
+- [x] Modular architecture (9 CSS + 10 JS modules)
+- [x] index.html as main entry point
+- [x] dashboard.html as standalone legacy fallback
 - [x] No external dependencies (except CDN)
 - [x] File:// protocol compatible
 - [x] No build process required
@@ -1718,10 +2047,11 @@ define(function() {
 - [x] Responsive design
 - [x] Accessibility features
 - [x] Performance optimized
+- [x] Browser caching of individual modules
 
 ### Deployment Steps
 
-1. **Download File:**
+1. **Download Repository:**
    ```bash
    git clone <repository>
    cd dashboard_dev
@@ -1729,14 +2059,18 @@ define(function() {
 
 2. **Open Dashboard:**
    ```
-   Double-click: dashboard.html
+   Option 1 (Recommended): Double-click index.html (Modular Edition)
+   Option 2 (Legacy):      Double-click dashboard.html (Standalone Archive)
    ```
 
 3. **Verify:**
    - Check browser console (F12) for errors
-   - Confirm data loads
-   - Test all filters
-   - Validate KPI calculations
+   - Confirm all CSS/JS modules load correctly
+   - Confirm data loads from ArcGIS API
+   - Test all filters and interactive features
+   - Validate KPI calculations and traffic lights
+   - Test modal popup functionality
+   - Verify auto-refresh timer
 
 ### Browser Compatibility
 
@@ -1806,7 +2140,19 @@ window.addEventListener('error', (event) => {
 
 ### Version History
 
-**Version 7.1 (November 2024):**
+**Version 7.1 - Modular Edition (November 2025):**
+- **Modular Architecture:** Refactored from monolithic dashboard.html (2788 lines) into modular structure
+- **CSS Modules:** Separated into 9 focused CSS files (variables, base, header, filters, kpi-cards, charts, table, modal, responsive)
+- **JS Modules:** Separated into 10 functional JavaScript files (config, state, calculations, data, ui-kpis, ui-charts, ui-table, ui-modal, ui-filters, main)
+- **file:// Compatibility:** Maintained full file:// protocol support using classic script tags (not ES6 modules)
+- **Improved Maintainability:** Each module has single, clear responsibility
+- **Parallel Development:** Multiple developers can work on different modules simultaneously
+- **Reduced Merge Conflicts:** Smaller, focused files minimize conflicts
+- **index.html as Entry Point:** New modular entry point (dashboard.html archived as standalone legacy version)
+- **Zero Build Process:** No webpack, transpilation, or build steps required
+- **Backwards Compatibility:** dashboard.html remains functional as standalone archive
+
+**Version 7.0 (November 2024):**
 - **Event Details Modal:** Clickable Event IDs with detailed mission information popup
 - **Compact Modal Design:** 2-column layout for address/location fields
 - **Dynamic Title:** Funkrufname and Einsatzstichwort in modal header
@@ -1815,16 +2161,13 @@ window.addEventListener('error', (event) => {
 - **Extended API Query:** Additional fields from Einsätze service
 - **Type-Safe Comparisons:** Fixed type coercion bug in cache lookups
 - **Accessibility:** ESC key support, keyboard navigation, WCAG AA compliance
-
-**Version 7.0 (November 2024):**
-- Traffic light threshold alerts
-- 90% percentile KPIs
-- 24-hour performance heatmap
-- Table toggle functionality
-- Chart interaction (clickable)
-- Shift filter (07:00-07:00)
-- Professional design overhaul
-- Repository cleanup
+- **Traffic Light Alerts:** Visual threshold status indicators
+- **90th Percentile KPIs:** Statistical performance metrics
+- **24-Hour Heatmap:** Temporal performance visualization
+- **Table Toggle:** Collapsible detailed data view
+- **Shift Filter:** 07:00-07:00 time range filtering
+- **Professional Design:** Complete UI/UX overhaul
+- **Repository Cleanup:** Code organization and documentation
 
 **Version 6.0:**
 - Multi-KPI dashboard
@@ -1835,7 +2178,7 @@ window.addEventListener('error', (event) => {
 
 ---
 
-**Document Version:** 2.0
-**Last Updated:** 2024-11-08
+**Document Version:** 2.1
+**Last Updated:** 2025-11-08
 **Maintained By:** Dashboard Development Team
 **For LLM Context:** This document provides complete technical context for AI-assisted development. All implementation details, data models, and extension points are documented for autonomous code generation and enhancement.

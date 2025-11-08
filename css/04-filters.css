@@ -1,0 +1,226 @@
+/* RTW Hilfsfrist Dashboard - Filters & RTW Picker */
+
+/* Filter Panel */
+.filter-panel {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.filter-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-900);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 6px;
+}
+
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--gray-200);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray-900);
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.form-group select:hover {
+    border-color: var(--primary-color);
+}
+
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
+}
+
+/* RTW Picker */
+.rtw-picker-section {
+    background: var(--gray-50);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 12px;
+}
+
+.rtw-picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.rtw-picker-header h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rtw-picker-toggle {
+    font-size: 20px;
+    color: var(--gray-600);
+    transition: transform 0.2s ease;
+}
+
+.rtw-picker-toggle.expanded {
+    transform: rotate(180deg);
+}
+
+.rtw-picker-content {
+    display: none;
+}
+
+.rtw-picker-content.visible {
+    display: block;
+}
+
+.rtw-picker-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.rtw-picker-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rtw-picker-btn.select-all {
+    background: var(--success-color);
+    color: white;
+}
+
+.rtw-picker-btn.select-all:hover {
+    background: #059669;
+}
+
+.rtw-picker-btn.deselect-all {
+    background: var(--gray-300);
+    color: var(--gray-700);
+}
+
+.rtw-picker-btn.deselect-all:hover {
+    background: var(--gray-400);
+}
+
+.rtw-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+}
+
+.rtw-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rtw-checkbox-item:hover {
+    background: var(--gray-100);
+}
+
+.rtw-checkbox-item input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
+}
+
+.rtw-checkbox-item label {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-700);
+    margin: 0;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.btn-secondary {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
