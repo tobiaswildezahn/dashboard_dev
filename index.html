@@ -217,6 +217,69 @@
                     ⚫ Status wird berechnet...
                 </div>
             </div>
+
+            <!-- Rückfahrtzeit Analyse KPI -->
+            <div class="kpi-card info">
+                <div class="kpi-header">
+                    <div>
+                        <div class="kpi-title">Rückfahrtzeit-Analyse</div>
+                        <div class="kpi-label">Alle Einsätze</div>
+                    </div>
+                    <div class="kpi-icon">🔄</div>
+                </div>
+                <div class="kpi-value-large">
+                    <span id="returnTimeTotal">0</span>
+                </div>
+                <div class="kpi-breakdown">
+                    <div class="kpi-breakdown-item">
+                        <div class="kpi-breakdown-label">📊 Mittelwert</div>
+                        <div class="kpi-breakdown-value">
+                            <span class="kpi-breakdown-number" id="returnTimeMean">N/A</span>
+                        </div>
+                    </div>
+                    <div class="kpi-breakdown-item">
+                        <div class="kpi-breakdown-label">📊 Median</div>
+                        <div class="kpi-breakdown-value">
+                            <span class="kpi-breakdown-number" id="returnTimeMedian">N/A</span>
+                        </div>
+                    </div>
+                    <div class="kpi-breakdown-item">
+                        <div class="kpi-breakdown-label">🔴 < 2 Min (verdächtig)</div>
+                        <div class="kpi-breakdown-value">
+                            <span class="kpi-breakdown-number" id="returnTimeLT2MinCount">0</span>
+                            <span class="kpi-breakdown-percentage" id="returnTimeLT2MinPercent">(0%)</span>
+                        </div>
+                    </div>
+                    <div class="kpi-breakdown-item">
+                        <div class="kpi-breakdown-label">🟠 < 5 Min (auffällig)</div>
+                        <div class="kpi-breakdown-value">
+                            <span class="kpi-breakdown-number" id="returnTimeLT5MinCount">0</span>
+                            <span class="kpi-breakdown-percentage" id="returnTimeLT5MinPercent">(0%)</span>
+                        </div>
+                    </div>
+                    <div class="kpi-breakdown-item">
+                        <div class="kpi-breakdown-label">🟡 < 10 Min (schnell)</div>
+                        <div class="kpi-breakdown-value">
+                            <span class="kpi-breakdown-number" id="returnTimeLT10MinCount">0</span>
+                            <span class="kpi-breakdown-percentage" id="returnTimeLT10MinPercent">(0%)</span>
+                        </div>
+                    </div>
+                    <div class="kpi-breakdown-item">
+                        <div class="kpi-breakdown-label">🔵 < 20 Min (grenzwertig)</div>
+                        <div class="kpi-breakdown-value">
+                            <span class="kpi-breakdown-number" id="returnTimeLT20MinCount">0</span>
+                            <span class="kpi-breakdown-percentage" id="returnTimeLT20MinPercent">(0%)</span>
+                        </div>
+                    </div>
+                    <div class="kpi-breakdown-item">
+                        <div class="kpi-breakdown-label">🟢 ≥ 20 Min (plausibel)</div>
+                        <div class="kpi-breakdown-value">
+                            <span class="kpi-breakdown-number" id="returnTimeGE20MinCount">0</span>
+                            <span class="kpi-breakdown-percentage" id="returnTimeGE20MinPercent">(0%)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Charts -->
@@ -247,6 +310,13 @@
         <div class="chart-card" style="grid-column: 1 / -1; margin-bottom: 16px;">
             <div class="chart-container" style="height: 280px;">
                 <canvas id="heatmapChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Rückfahrtzeit Histogramm -->
+        <div class="chart-card" style="grid-column: 1 / -1; margin-bottom: 16px;">
+            <div class="chart-container" style="height: 360px;">
+                <canvas id="returnTimeHistogramChart"></canvas>
             </div>
         </div>
 

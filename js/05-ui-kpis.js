@@ -134,3 +134,78 @@ function updateKPIs(data) {
     // Ampelschema für Hilfsfrist
     updateKPIStatus('hilfsfristCard', 'hilfsfristStatusBadge', 'hilfsfristThresholdInfo', kpis.hilfsfristPercentage);
 }
+
+/**
+ * AKTUALISIERT RÜCKFAHRTZEIT-KPI-KARTE
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Zeigt Analyse der Rückfahrtzeiten
+ * - Fokussiert auf verdächtig kurze Zeiten (<2, <5, <10, <20 Minuten)
+ * - Hilft bei Identifikation von Datenqualitätsproblemen
+ * - Gilt für ALLE Einsätze (nicht nur hilfsfristrelevante)
+ *
+ * ANGEZEIGTE KENNZAHLEN:
+ * - Gesamtanzahl mit gültiger Rückfahrtzeit
+ * - Anzahl und Quoten für jede Kategorie
+ * - Statistische Kennzahlen (Mittelwert, Median)
+ *
+ * VERWENDUNG:
+ * - Datenqualitätskontrolle
+ * - Identifikation von Ausreißern
+ * - Peer-Vergleich (da keine externen Routing-Daten verfügbar)
+ *
+ * @param {Array} data - Alle Einsatzdaten (gefiltert nach RTW-Auswahl)
+ */
+function updateReturnTimeKPI(data) {
+    const kpis = calculateReturnTimeKPIs(data);
+
+    // Gesamtanzahl
+    const totalEl = document.getElementById('returnTimeTotal');
+    if (totalEl) totalEl.textContent = kpis.total;
+
+    // Mittelwert
+    const meanEl = document.getElementById('returnTimeMean');
+    if (meanEl) {
+        meanEl.textContent = kpis.mean !== null
+            ? Math.round(kpis.mean / 60) + ' min'
+            : 'N/A';
+    }
+
+    // Median
+    const medianEl = document.getElementById('returnTimeMedian');
+    if (medianEl) {
+        medianEl.textContent = kpis.median !== null
+            ? Math.round(kpis.median / 60) + ' min'
+            : 'N/A';
+    }
+
+    // Kategorien: < 2 Minuten
+    const lt2minCountEl = document.getElementById('returnTimeLT2MinCount');
+    const lt2minPercentEl = document.getElementById('returnTimeLT2MinPercent');
+    if (lt2minCountEl) lt2minCountEl.textContent = kpis.lessThan2Min;
+    if (lt2minPercentEl) lt2minPercentEl.textContent = '(' + kpis.percentLessThan2Min.toFixed(1) + '%)';
+
+    // Kategorien: < 5 Minuten
+    const lt5minCountEl = document.getElementById('returnTimeLT5MinCount');
+    const lt5minPercentEl = document.getElementById('returnTimeLT5MinPercent');
+    if (lt5minCountEl) lt5minCountEl.textContent = kpis.lessThan5Min;
+    if (lt5minPercentEl) lt5minPercentEl.textContent = '(' + kpis.percentLessThan5Min.toFixed(1) + '%)';
+
+    // Kategorien: < 10 Minuten
+    const lt10minCountEl = document.getElementById('returnTimeLT10MinCount');
+    const lt10minPercentEl = document.getElementById('returnTimeLT10MinPercent');
+    if (lt10minCountEl) lt10minCountEl.textContent = kpis.lessThan10Min;
+    if (lt10minPercentEl) lt10minPercentEl.textContent = '(' + kpis.percentLessThan10Min.toFixed(1) + '%)';
+
+    // Kategorien: < 20 Minuten
+    const lt20minCountEl = document.getElementById('returnTimeLT20MinCount');
+    const lt20minPercentEl = document.getElementById('returnTimeLT20MinPercent');
+    if (lt20minCountEl) lt20minCountEl.textContent = kpis.lessThan20Min;
+    if (lt20minPercentEl) lt20minPercentEl.textContent = '(' + kpis.percentLessThan20Min.toFixed(1) + '%)';
+
+    // Kategorien: >= 20 Minuten (plausibel)
+    const ge20minCountEl = document.getElementById('returnTimeGE20MinCount');
+    const ge20minPercentEl = document.getElementById('returnTimeGE20MinPercent');
+    if (ge20minCountEl) ge20minCountEl.textContent = kpis.greaterEqual20Min;
+    if (ge20minPercentEl) ge20minPercentEl.textContent = '(' + kpis.percentGreaterEqual20Min.toFixed(1) + '%)';
+}

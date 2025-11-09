@@ -183,6 +183,11 @@ function processData(rawResourceFeatures, rawEventFeatures) {
             ? (new Date(attrs.time_arrived) - new Date(attrs.time_on_the_way)) / 1000
             : null;
 
+        // Rückfahrtzeit: Zeit zwischen "Einsatz beendet per Funk" und "Zurück an Station"
+        const returnTime = attrs.time_finished && attrs.time_finished_via_radio
+            ? (new Date(attrs.time_finished) - new Date(attrs.time_finished_via_radio)) / 1000
+            : null;
+
         const responseAchieved = responseTime !== null
             ? responseTime <= CONFIG.responseTimeThreshold
             : null;
@@ -209,6 +214,7 @@ function processData(rawResourceFeatures, rawEventFeatures) {
             isHilfsfristRelevant: isHilfsfristRelevant(nameeventtype),
             responseTime: responseTime,
             travelTime: travelTime,
+            returnTime: returnTime,
             responseAchieved: responseAchieved,
             travelAchieved: travelAchieved,
             hilfsfristAchieved: hilfsfristAchieved
