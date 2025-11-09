@@ -34,6 +34,7 @@ function updateDashboard() {
     const data = filterBySelectedRtw(state.processedData);
 
     updateKPIs(data);
+    updateReturnTimeKPI(data);
     updateCharts(data);
     updateTable(data);
 }

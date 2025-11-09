@@ -442,3 +442,182 @@ function getThresholdStatus(percentage) {
     if (percentage >= 75) return { status: 'yellow', emoji: '🟡', text: 'Akzeptabel (75-89%)' };
     return { status: 'red', emoji: '🔴', text: 'Kritisch (<75%)' };
 }
+
+// ============================================================================
+// RÜCKFAHRTZEIT-ANALYSE
+// ============================================================================
+
+/**
+ * BERECHNET RÜCKFAHRTZEIT-KPIs MIT DISKRETEN ZEITKATEGORIEN
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Analysiert die Rückfahrtzeiten von RTW-Einsätzen
+ * - Kategorisiert in DISKRETE (nicht überlappende) Zeitbereiche
+ * - Gilt für ALLE Einsätze (nicht nur hilfsfristrelevante)
+ * - Identifiziert potenzielle Datenqualitätsprobleme
+ *
+ * RÜCKFAHRTZEIT = time_finished - time_finished_via_radio
+ *
+ * KATEGORIEN (DISKRET):
+ * - 0-1 Min: Rückfahrtzeiten von 0 bis unter 60 Sekunden
+ * - 1-2 Min: Rückfahrtzeiten von 60 bis unter 120 Sekunden
+ * - 2-4 Min: Rückfahrtzeiten von 120 bis unter 240 Sekunden
+ * - 4-8 Min: Rückfahrtzeiten von 240 bis unter 480 Sekunden
+ * - 8-15 Min: Rückfahrtzeiten von 480 bis unter 900 Sekunden
+ * - >= 15 Min: Rückfahrtzeiten von 900 Sekunden und mehr
+ *
+ * WICHTIG: Summe aller Kategorien = 100% (jeder Einsatz zählt genau einmal)
+ *
+ * BERECHNETE METRIKEN:
+ * - Anzahl und Quote pro Kategorie
+ * - Mittelwert, Median, 0.25 und 0.75 Perzentile
+ * - Gesamtanzahl mit gültigen Rückfahrtzeiten
+ *
+ * @param {Array} data - Alle Einsatzdaten (auch nicht-hilfsfristrelevante)
+ * @returns {Object} KPI-Object mit diskreten Kategorien, Statistiken und Perzentilen
+ */
+function calculateReturnTimeKPIs(data) {
+    // Filtere nur Datensätze mit gültiger Rückfahrtzeit
+    const validReturnTimes = data.filter(function(d) {
+        return d.returnTime !== null && d.returnTime >= 0;
+    });
+
+    const total = validReturnTimes.length;
+
+    // Kategorisierung in DISKRETE Zeitbereiche
+    // 0-1 Min: 0s bis < 60s
+    const range0to1 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 0 && d.returnTime < 60;
+    }).length;
+
+    // 1-2 Min: 60s bis < 120s
+    const range1to2 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 60 && d.returnTime < 120;
+    }).length;
+
+    // 2-4 Min: 120s bis < 240s
+    const range2to4 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 120 && d.returnTime < 240;
+    }).length;
+
+    // 4-8 Min: 240s bis < 480s
+    const range4to8 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 240 && d.returnTime < 480;
+    }).length;
+
+    // 8-15 Min: 480s bis < 900s
+    const range8to15 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 480 && d.returnTime < 900;
+    }).length;
+
+    // >= 15 Min: 900s und mehr
+    const range15plus = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 900;
+    }).length;
+
+    // Berechne Quoten (diskret, Summe aller Kategorien = 100%)
+    const percentRange0to1 = total > 0 ? (range0to1 / total * 100) : 0;
+    const percentRange1to2 = total > 0 ? (range1to2 / total * 100) : 0;
+    const percentRange2to4 = total > 0 ? (range2to4 / total * 100) : 0;
+    const percentRange4to8 = total > 0 ? (range4to8 / total * 100) : 0;
+    const percentRange8to15 = total > 0 ? (range8to15 / total * 100) : 0;
+    const percentRange15plus = total > 0 ? (range15plus / total * 100) : 0;
+
+    // Extrahiere Zeiten für statistische Berechnung
+    const returnTimes = validReturnTimes.map(function(d) { return d.returnTime; });
+
+    // Berechne statistische Kennzahlen
+    const mean = returnTimes.length > 0
+        ? returnTimes.reduce(function(sum, t) { return sum + t; }, 0) / returnTimes.length
+        : null;
+
+    const median = calculatePercentile(returnTimes, 50);
+    const percentile25 = calculatePercentile(returnTimes, 25);
+    const percentile75 = calculatePercentile(returnTimes, 75);
+
+    return {
+        total: total,
+        range0to1: range0to1,
+        range1to2: range1to2,
+        range2to4: range2to4,
+        range4to8: range4to8,
+        range8to15: range8to15,
+        range15plus: range15plus,
+        percentRange0to1: percentRange0to1,
+        percentRange1to2: percentRange1to2,
+        percentRange2to4: percentRange2to4,
+        percentRange4to8: percentRange4to8,
+        percentRange8to15: percentRange8to15,
+        percentRange15plus: percentRange15plus,
+        mean: mean,
+        median: median,
+        percentile25: percentile25,
+        percentile75: percentile75
+    };
+}
+
+/**
+ * BERECHNET HISTOGRAM-DATEN FÜR RÜCKFAHRTZEIT-VERTEILUNG
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Erstellt Bins für Histogramm-Darstellung
+ * - 2-Minuten-Intervalle für detaillierte Analyse
+ * - Bereiche: 0-2, 2-4, 4-6, ... bis 30+ Minuten
+ *
+ * VERWENDUNG:
+ * - Visualisierung der Verteilung in Chart.js
+ * - Identifikation von Mustern und Ausreißern
+ *
+ * @param {Array} data - Alle Einsatzdaten
+ * @returns {Object} Object mit labels und counts für Histogramm
+ */
+function calculateReturnTimeHistogramData(data) {
+    const validReturnTimes = data.filter(function(d) {
+        return d.returnTime !== null && d.returnTime >= 0;
+    });
+
+    // Bins: 2-Minuten-Intervalle (0-2, 2-4, 4-6, ... 28-30, >30)
+    const bins = {
+        '0-2min': 0,
+        '2-4min': 0,
+        '4-6min': 0,
+        '6-8min': 0,
+        '8-10min': 0,
+        '10-12min': 0,
+        '12-14min': 0,
+        '14-16min': 0,
+        '16-18min': 0,
+        '18-20min': 0,
+        '20-22min': 0,
+        '22-24min': 0,
+        '24-26min': 0,
+        '26-28min': 0,
+        '28-30min': 0,
+        '>30min': 0
+    };
+
+    validReturnTimes.forEach(function(item) {
+        const minutes = item.returnTime / 60;
+        if (minutes < 2) bins['0-2min']++;
+        else if (minutes < 4) bins['2-4min']++;
+        else if (minutes < 6) bins['4-6min']++;
+        else if (minutes < 8) bins['6-8min']++;
+        else if (minutes < 10) bins['8-10min']++;
+        else if (minutes < 12) bins['10-12min']++;
+        else if (minutes < 14) bins['12-14min']++;
+        else if (minutes < 16) bins['14-16min']++;
+        else if (minutes < 18) bins['16-18min']++;
+        else if (minutes < 20) bins['18-20min']++;
+        else if (minutes < 22) bins['20-22min']++;
+        else if (minutes < 24) bins['22-24min']++;
+        else if (minutes < 26) bins['24-26min']++;
+        else if (minutes < 28) bins['26-28min']++;
+        else if (minutes < 30) bins['28-30min']++;
+        else bins['>30min']++;
+    });
+
+    return {
+        labels: Object.keys(bins),
+        counts: Object.values(bins)
+    };
+}

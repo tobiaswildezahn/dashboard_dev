@@ -21,3 +21,4 @@ state.lineChart = null;
 state.barChart = null;
 state.pieChart = null;
 state.heatmapChart = null;
+state.returnTimeChart = null;

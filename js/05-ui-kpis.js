@@ -134,3 +134,88 @@ function updateKPIs(data) {
     // Ampelschema für Hilfsfrist
     updateKPIStatus('hilfsfristCard', 'hilfsfristStatusBadge', 'hilfsfristThresholdInfo', kpis.hilfsfristPercentage);
 }
+
+/**
+ * AKTUALISIERT RÜCKFAHRTZEIT-KPI-KARTE
+ *
+ * AUSFÜHRLICHE ERKLÄRUNG:
+ * - Zeigt Analyse der Rückfahrtzeiten
+ * - DISKRETE Kategorien: 0-1, 1-2, 2-4, 4-8, 8-15, ≥15 Minuten
+ * - Hilft bei Identifikation von Datenqualitätsproblemen
+ * - Gilt für ALLE Einsätze (nicht nur hilfsfristrelevante)
+ *
+ * ANGEZEIGTE KENNZAHLEN:
+ * - Gesamtanzahl mit gültiger Rückfahrtzeit
+ * - Diskrete Anzahl und Quoten (Prozent zuerst, dann absolute Zahl)
+ * - Statistische Kennzahlen (Mittelwert, Median mit 1 Nachkommastelle)
+ *
+ * FORMAT:
+ * - Statistiken: "X.X min" (1 Nachkommastelle)
+ * - Kategorien: "XX.X% (Anzahl)" (Prozent vor absoluter Zahl)
+ *
+ * VERWENDUNG:
+ * - Datenqualitätskontrolle
+ * - Identifikation von Ausreißern
+ * - Peer-Vergleich (da keine externen Routing-Daten verfügbar)
+ *
+ * @param {Array} data - Alle Einsatzdaten (gefiltert nach RTW-Auswahl)
+ */
+function updateReturnTimeKPI(data) {
+    const kpis = calculateReturnTimeKPIs(data);
+
+    // Gesamtanzahl
+    const totalEl = document.getElementById('returnTimeTotal');
+    if (totalEl) totalEl.textContent = kpis.total;
+
+    // Mittelwert (1 Nachkommastelle)
+    const meanEl = document.getElementById('returnTimeMean');
+    if (meanEl) {
+        meanEl.textContent = kpis.mean !== null
+            ? (kpis.mean / 60).toFixed(1) + ' min'
+            : 'N/A';
+    }
+
+    // Median (1 Nachkommastelle)
+    const medianEl = document.getElementById('returnTimeMedian');
+    if (medianEl) {
+        medianEl.textContent = kpis.median !== null
+            ? (kpis.median / 60).toFixed(1) + ' min'
+            : 'N/A';
+    }
+
+    // Kategorie: 0-1 Min (Prozent zuerst, dann absolute Zahl)
+    const range0to1CountEl = document.getElementById('returnTimeRange0to1Count');
+    const range0to1PercentEl = document.getElementById('returnTimeRange0to1Percent');
+    if (range0to1PercentEl) range0to1PercentEl.textContent = kpis.percentRange0to1.toFixed(1) + '%';
+    if (range0to1CountEl) range0to1CountEl.textContent = '(' + kpis.range0to1 + ')';
+
+    // Kategorie: 1-2 Min (Prozent zuerst, dann absolute Zahl)
+    const range1to2CountEl = document.getElementById('returnTimeRange1to2Count');
+    const range1to2PercentEl = document.getElementById('returnTimeRange1to2Percent');
+    if (range1to2PercentEl) range1to2PercentEl.textContent = kpis.percentRange1to2.toFixed(1) + '%';
+    if (range1to2CountEl) range1to2CountEl.textContent = '(' + kpis.range1to2 + ')';
+
+    // Kategorie: 2-4 Min (Prozent zuerst, dann absolute Zahl)
+    const range2to4CountEl = document.getElementById('returnTimeRange2to4Count');
+    const range2to4PercentEl = document.getElementById('returnTimeRange2to4Percent');
+    if (range2to4PercentEl) range2to4PercentEl.textContent = kpis.percentRange2to4.toFixed(1) + '%';
+    if (range2to4CountEl) range2to4CountEl.textContent = '(' + kpis.range2to4 + ')';
+
+    // Kategorie: 4-8 Min (Prozent zuerst, dann absolute Zahl)
+    const range4to8CountEl = document.getElementById('returnTimeRange4to8Count');
+    const range4to8PercentEl = document.getElementById('returnTimeRange4to8Percent');
+    if (range4to8PercentEl) range4to8PercentEl.textContent = kpis.percentRange4to8.toFixed(1) + '%';
+    if (range4to8CountEl) range4to8CountEl.textContent = '(' + kpis.range4to8 + ')';
+
+    // Kategorie: 8-15 Min (Prozent zuerst, dann absolute Zahl)
+    const range8to15CountEl = document.getElementById('returnTimeRange8to15Count');
+    const range8to15PercentEl = document.getElementById('returnTimeRange8to15Percent');
+    if (range8to15PercentEl) range8to15PercentEl.textContent = kpis.percentRange8to15.toFixed(1) + '%';
+    if (range8to15CountEl) range8to15CountEl.textContent = '(' + kpis.range8to15 + ')';
+
+    // Kategorie: >= 15 Min (Prozent zuerst, dann absolute Zahl)
+    const range15plusCountEl = document.getElementById('returnTimeRange15plusCount');
+    const range15plusPercentEl = document.getElementById('returnTimeRange15plusPercent');
+    if (range15plusPercentEl) range15plusPercentEl.textContent = kpis.percentRange15plus.toFixed(1) + '%';
+    if (range15plusCountEl) range15plusCountEl.textContent = '(' + kpis.range15plus + ')';
+}

@@ -10,6 +10,7 @@ function updateCharts(data) {
     updateBarChart(data);
     updatePieChart(data);
     updateHeatmap(data);
+    updateReturnTimeHistogram(data);
 }
 
 // ============================================================================
@@ -511,6 +512,117 @@ function updateHeatmap(data) {
                     },
                     grid: {
                         display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// RÜCKFAHRTZEIT HISTOGRAMM - mit Mittelwert, Median und Perzentilen
+// ============================================================================
+
+function updateReturnTimeHistogram(data) {
+    // Hole Histogram-Daten und KPIs
+    const histData = calculateReturnTimeHistogramData(data);
+    const kpis = calculateReturnTimeKPIs(data);
+
+    // Zerstöre existierenden Chart falls vorhanden
+    if (state.returnTimeChart) {
+        state.returnTimeChart.destroy();
+    }
+
+    const canvas = document.getElementById('returnTimeHistogramChart');
+    if (!canvas) {
+        console.warn('Canvas für Rückfahrtzeit-Histogramm nicht gefunden');
+        return;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    // Konvertiere Statistiken zu Minuten für Anzeige
+    const meanMinutes = kpis.mean !== null ? kpis.mean / 60 : null;
+    const medianMinutes = kpis.median !== null ? kpis.median / 60 : null;
+    const p25Minutes = kpis.percentile25 !== null ? kpis.percentile25 / 60 : null;
+    const p75Minutes = kpis.percentile75 !== null ? kpis.percentile75 / 60 : null;
+
+    state.returnTimeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: histData.labels,
+            datasets: [{
+                label: 'Anzahl Einsätze',
+                data: histData.counts,
+                backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                borderColor: 'rgb(139, 92, 246)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: 'Rückfahrtzeit-Verteilung (Alle Einsätze)',
+                    font: { size: 16, weight: 'bold' }
+                },
+                subtitle: {
+                    display: true,
+                    text: 'Statistik: ' +
+                        (meanMinutes !== null ? 'Ø ' + meanMinutes.toFixed(1) + ' min | ' : '') +
+                        (medianMinutes !== null ? 'Median ' + medianMinutes.toFixed(1) + ' min | ' : '') +
+                        (p25Minutes !== null ? 'P25 ' + p25Minutes.toFixed(1) + ' min | ' : '') +
+                        (p75Minutes !== null ? 'P75 ' + p75Minutes.toFixed(1) + ' min' : ''),
+                    font: { size: 12 },
+                    color: '#666',
+                    padding: { bottom: 10 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const count = context.parsed.y;
+                            const total = histData.counts.reduce(function(sum, val) { return sum + val; }, 0);
+                            const percentage = total > 0 ? (count / total * 100).toFixed(1) : 0;
+                            return 'Anzahl: ' + count + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        font: { size: 11 }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Anzahl Einsätze',
+                        font: { size: 12 }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: { size: 10 },
+                        maxRotation: 45,
+                        minRotation: 45
+                    },
+                    grid: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Rückfahrtzeit',
+                        font: { size: 12 }
                     }
                 }
             }
