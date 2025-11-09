@@ -140,14 +140,18 @@ function updateKPIs(data) {
  *
  * AUSFÜHRLICHE ERKLÄRUNG:
  * - Zeigt Analyse der Rückfahrtzeiten
- * - Fokussiert auf verdächtig kurze Zeiten (<2, <5, <10, <20 Minuten)
+ * - KUMULATIVE Kategorien: <2, <5, <10, <20, ≥20 Minuten
  * - Hilft bei Identifikation von Datenqualitätsproblemen
  * - Gilt für ALLE Einsätze (nicht nur hilfsfristrelevante)
  *
  * ANGEZEIGTE KENNZAHLEN:
  * - Gesamtanzahl mit gültiger Rückfahrtzeit
- * - Anzahl und Quoten für jede Kategorie
- * - Statistische Kennzahlen (Mittelwert, Median)
+ * - Kumulative Anzahl und Quoten (Prozent zuerst, dann absolute Zahl)
+ * - Statistische Kennzahlen (Mittelwert, Median mit 1 Nachkommastelle)
+ *
+ * FORMAT:
+ * - Statistiken: "X.X min" (1 Nachkommastelle)
+ * - Kategorien: "XX.X% (Anzahl)" (Prozent vor absoluter Zahl)
  *
  * VERWENDUNG:
  * - Datenqualitätskontrolle
@@ -163,49 +167,49 @@ function updateReturnTimeKPI(data) {
     const totalEl = document.getElementById('returnTimeTotal');
     if (totalEl) totalEl.textContent = kpis.total;
 
-    // Mittelwert
+    // Mittelwert (1 Nachkommastelle)
     const meanEl = document.getElementById('returnTimeMean');
     if (meanEl) {
         meanEl.textContent = kpis.mean !== null
-            ? Math.round(kpis.mean / 60) + ' min'
+            ? (kpis.mean / 60).toFixed(1) + ' min'
             : 'N/A';
     }
 
-    // Median
+    // Median (1 Nachkommastelle)
     const medianEl = document.getElementById('returnTimeMedian');
     if (medianEl) {
         medianEl.textContent = kpis.median !== null
-            ? Math.round(kpis.median / 60) + ' min'
+            ? (kpis.median / 60).toFixed(1) + ' min'
             : 'N/A';
     }
 
-    // Kategorien: < 2 Minuten
+    // Kategorien: < 2 Minuten (Prozent zuerst, dann absolute Zahl)
     const lt2minCountEl = document.getElementById('returnTimeLT2MinCount');
     const lt2minPercentEl = document.getElementById('returnTimeLT2MinPercent');
-    if (lt2minCountEl) lt2minCountEl.textContent = kpis.lessThan2Min;
-    if (lt2minPercentEl) lt2minPercentEl.textContent = '(' + kpis.percentLessThan2Min.toFixed(1) + '%)';
+    if (lt2minPercentEl) lt2minPercentEl.textContent = kpis.percentLessThan2Min.toFixed(1) + '%';
+    if (lt2minCountEl) lt2minCountEl.textContent = '(' + kpis.lessThan2Min + ')';
 
-    // Kategorien: < 5 Minuten
+    // Kategorien: < 5 Minuten (Prozent zuerst, dann absolute Zahl)
     const lt5minCountEl = document.getElementById('returnTimeLT5MinCount');
     const lt5minPercentEl = document.getElementById('returnTimeLT5MinPercent');
-    if (lt5minCountEl) lt5minCountEl.textContent = kpis.lessThan5Min;
-    if (lt5minPercentEl) lt5minPercentEl.textContent = '(' + kpis.percentLessThan5Min.toFixed(1) + '%)';
+    if (lt5minPercentEl) lt5minPercentEl.textContent = kpis.percentLessThan5Min.toFixed(1) + '%';
+    if (lt5minCountEl) lt5minCountEl.textContent = '(' + kpis.lessThan5Min + ')';
 
-    // Kategorien: < 10 Minuten
+    // Kategorien: < 10 Minuten (Prozent zuerst, dann absolute Zahl)
     const lt10minCountEl = document.getElementById('returnTimeLT10MinCount');
     const lt10minPercentEl = document.getElementById('returnTimeLT10MinPercent');
-    if (lt10minCountEl) lt10minCountEl.textContent = kpis.lessThan10Min;
-    if (lt10minPercentEl) lt10minPercentEl.textContent = '(' + kpis.percentLessThan10Min.toFixed(1) + '%)';
+    if (lt10minPercentEl) lt10minPercentEl.textContent = kpis.percentLessThan10Min.toFixed(1) + '%';
+    if (lt10minCountEl) lt10minCountEl.textContent = '(' + kpis.lessThan10Min + ')';
 
-    // Kategorien: < 20 Minuten
+    // Kategorien: < 20 Minuten (Prozent zuerst, dann absolute Zahl)
     const lt20minCountEl = document.getElementById('returnTimeLT20MinCount');
     const lt20minPercentEl = document.getElementById('returnTimeLT20MinPercent');
-    if (lt20minCountEl) lt20minCountEl.textContent = kpis.lessThan20Min;
-    if (lt20minPercentEl) lt20minPercentEl.textContent = '(' + kpis.percentLessThan20Min.toFixed(1) + '%)';
+    if (lt20minPercentEl) lt20minPercentEl.textContent = kpis.percentLessThan20Min.toFixed(1) + '%';
+    if (lt20minCountEl) lt20minCountEl.textContent = '(' + kpis.lessThan20Min + ')';
 
-    // Kategorien: >= 20 Minuten (plausibel)
+    // Kategorien: >= 20 Minuten (Prozent zuerst, dann absolute Zahl)
     const ge20minCountEl = document.getElementById('returnTimeGE20MinCount');
     const ge20minPercentEl = document.getElementById('returnTimeGE20MinPercent');
-    if (ge20minCountEl) ge20minCountEl.textContent = kpis.greaterEqual20Min;
-    if (ge20minPercentEl) ge20minPercentEl.textContent = '(' + kpis.percentGreaterEqual20Min.toFixed(1) + '%)';
+    if (ge20minPercentEl) ge20minPercentEl.textContent = kpis.percentGreaterEqual20Min.toFixed(1) + '%';
+    if (ge20minCountEl) ge20minCountEl.textContent = '(' + kpis.greaterEqual20Min + ')';
 }

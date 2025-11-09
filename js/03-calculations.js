@@ -448,30 +448,32 @@ function getThresholdStatus(percentage) {
 // ============================================================================
 
 /**
- * BERECHNET RÜCKFAHRTZEIT-KPIs MIT PLAUSIBILITÄTS-KATEGORIEN
+ * BERECHNET RÜCKFAHRTZEIT-KPIs MIT KUMULATIVEN PLAUSIBILITÄTS-KATEGORIEN
  *
  * AUSFÜHRLICHE ERKLÄRUNG:
  * - Analysiert die Rückfahrtzeiten von RTW-Einsätzen
- * - Kategorisiert nach Plausibilität (verdächtig kurz bis plausibel)
+ * - Kategorisiert KUMULATIV nach Plausibilität
  * - Gilt für ALLE Einsätze (nicht nur hilfsfristrelevante)
  * - Identifiziert potenzielle Datenqualitätsprobleme
  *
  * RÜCKFAHRTZEIT = time_finished - time_finished_via_radio
  *
- * KATEGORIEN (Focus auf verdächtig kurze Zeiten):
- * - < 2 Min (120s): Sehr verdächtig - kaum realistisch
- * - < 5 Min (300s): Verdächtig - extrem schnelle Rückkehr
- * - < 10 Min (600s): Auffällig - sehr schnelle Rückkehr
- * - < 20 Min (1200s): Grenzwertig - schnelle Rückkehr
- * - ≥ 20 Min: Plausibel - normale Rückfahrtzeit
+ * KATEGORIEN (KUMULATIV):
+ * - < 2 Min (120s): Alle Rückfahrtzeiten unter 2 Minuten
+ * - < 5 Min (300s): Alle Rückfahrtzeiten unter 5 Minuten (inklusive < 2 Min)
+ * - < 10 Min (600s): Alle Rückfahrtzeiten unter 10 Minuten (inklusive < 5 Min)
+ * - < 20 Min (1200s): Alle Rückfahrtzeiten unter 20 Minuten (inklusive < 10 Min)
+ * - ≥ 20 Min: Alle Rückfahrtzeiten ab 20 Minuten
+ *
+ * WICHTIG: Die Summe von lessThan20Min + greaterEqual20Min = 100%
  *
  * BERECHNETE METRIKEN:
- * - Anzahl und Quote pro Kategorie
+ * - Kumulative Anzahl und Quote pro Kategorie
  * - Mittelwert, Median, 0.25 und 0.75 Perzentile
  * - Gesamtanzahl mit gültigen Rückfahrtzeiten
  *
  * @param {Array} data - Alle Einsatzdaten (auch nicht-hilfsfristrelevante)
- * @returns {Object} KPI-Object mit Kategorien, Statistiken und Perzentilen
+ * @returns {Object} KPI-Object mit kumulativen Kategorien, Statistiken und Perzentilen
  */
 function calculateReturnTimeKPIs(data) {
     // Filtere nur Datensätze mit gültiger Rückfahrtzeit
@@ -481,14 +483,19 @@ function calculateReturnTimeKPIs(data) {
 
     const total = validReturnTimes.length;
 
-    // Kategorisierung nach Plausibilität
+    // Kategorisierung nach Plausibilität (KUMULATIV)
+    // < 2 Min: alle mit Rückfahrtzeit < 120s
     const lessThan2Min = validReturnTimes.filter(function(d) { return d.returnTime < 120; }).length;
+    // < 5 Min: alle mit Rückfahrtzeit < 300s (inklusive < 2 Min)
     const lessThan5Min = validReturnTimes.filter(function(d) { return d.returnTime < 300; }).length;
+    // < 10 Min: alle mit Rückfahrtzeit < 600s (inklusive < 5 Min und < 2 Min)
     const lessThan10Min = validReturnTimes.filter(function(d) { return d.returnTime < 600; }).length;
+    // < 20 Min: alle mit Rückfahrtzeit < 1200s (inklusive alle vorherigen)
     const lessThan20Min = validReturnTimes.filter(function(d) { return d.returnTime < 1200; }).length;
+    // >= 20 Min: alle mit Rückfahrtzeit >= 1200s
     const greaterEqual20Min = validReturnTimes.filter(function(d) { return d.returnTime >= 1200; }).length;
 
-    // Berechne Quoten
+    // Berechne Quoten (kumulativ, lessThan20Min + greaterEqual20Min = 100%)
     const percentLessThan2Min = total > 0 ? (lessThan2Min / total * 100) : 0;
     const percentLessThan5Min = total > 0 ? (lessThan5Min / total * 100) : 0;
     const percentLessThan10Min = total > 0 ? (lessThan10Min / total * 100) : 0;
