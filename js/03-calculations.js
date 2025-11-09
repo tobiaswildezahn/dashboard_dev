@@ -448,32 +448,33 @@ function getThresholdStatus(percentage) {
 // ============================================================================
 
 /**
- * BERECHNET RÜCKFAHRTZEIT-KPIs MIT KUMULATIVEN PLAUSIBILITÄTS-KATEGORIEN
+ * BERECHNET RÜCKFAHRTZEIT-KPIs MIT DISKRETEN ZEITKATEGORIEN
  *
  * AUSFÜHRLICHE ERKLÄRUNG:
  * - Analysiert die Rückfahrtzeiten von RTW-Einsätzen
- * - Kategorisiert KUMULATIV nach Plausibilität
+ * - Kategorisiert in DISKRETE (nicht überlappende) Zeitbereiche
  * - Gilt für ALLE Einsätze (nicht nur hilfsfristrelevante)
  * - Identifiziert potenzielle Datenqualitätsprobleme
  *
  * RÜCKFAHRTZEIT = time_finished - time_finished_via_radio
  *
- * KATEGORIEN (KUMULATIV):
- * - < 2 Min (120s): Alle Rückfahrtzeiten unter 2 Minuten
- * - < 5 Min (300s): Alle Rückfahrtzeiten unter 5 Minuten (inklusive < 2 Min)
- * - < 10 Min (600s): Alle Rückfahrtzeiten unter 10 Minuten (inklusive < 5 Min)
- * - < 20 Min (1200s): Alle Rückfahrtzeiten unter 20 Minuten (inklusive < 10 Min)
- * - ≥ 20 Min: Alle Rückfahrtzeiten ab 20 Minuten
+ * KATEGORIEN (DISKRET):
+ * - 0-1 Min: Rückfahrtzeiten von 0 bis unter 60 Sekunden
+ * - 1-2 Min: Rückfahrtzeiten von 60 bis unter 120 Sekunden
+ * - 2-4 Min: Rückfahrtzeiten von 120 bis unter 240 Sekunden
+ * - 4-8 Min: Rückfahrtzeiten von 240 bis unter 480 Sekunden
+ * - 8-15 Min: Rückfahrtzeiten von 480 bis unter 900 Sekunden
+ * - >= 15 Min: Rückfahrtzeiten von 900 Sekunden und mehr
  *
- * WICHTIG: Die Summe von lessThan20Min + greaterEqual20Min = 100%
+ * WICHTIG: Summe aller Kategorien = 100% (jeder Einsatz zählt genau einmal)
  *
  * BERECHNETE METRIKEN:
- * - Kumulative Anzahl und Quote pro Kategorie
+ * - Anzahl und Quote pro Kategorie
  * - Mittelwert, Median, 0.25 und 0.75 Perzentile
  * - Gesamtanzahl mit gültigen Rückfahrtzeiten
  *
  * @param {Array} data - Alle Einsatzdaten (auch nicht-hilfsfristrelevante)
- * @returns {Object} KPI-Object mit kumulativen Kategorien, Statistiken und Perzentilen
+ * @returns {Object} KPI-Object mit diskreten Kategorien, Statistiken und Perzentilen
  */
 function calculateReturnTimeKPIs(data) {
     // Filtere nur Datensätze mit gültiger Rückfahrtzeit
@@ -483,24 +484,44 @@ function calculateReturnTimeKPIs(data) {
 
     const total = validReturnTimes.length;
 
-    // Kategorisierung nach Plausibilität (KUMULATIV)
-    // < 2 Min: alle mit Rückfahrtzeit < 120s
-    const lessThan2Min = validReturnTimes.filter(function(d) { return d.returnTime < 120; }).length;
-    // < 5 Min: alle mit Rückfahrtzeit < 300s (inklusive < 2 Min)
-    const lessThan5Min = validReturnTimes.filter(function(d) { return d.returnTime < 300; }).length;
-    // < 10 Min: alle mit Rückfahrtzeit < 600s (inklusive < 5 Min und < 2 Min)
-    const lessThan10Min = validReturnTimes.filter(function(d) { return d.returnTime < 600; }).length;
-    // < 20 Min: alle mit Rückfahrtzeit < 1200s (inklusive alle vorherigen)
-    const lessThan20Min = validReturnTimes.filter(function(d) { return d.returnTime < 1200; }).length;
-    // >= 20 Min: alle mit Rückfahrtzeit >= 1200s
-    const greaterEqual20Min = validReturnTimes.filter(function(d) { return d.returnTime >= 1200; }).length;
+    // Kategorisierung in DISKRETE Zeitbereiche
+    // 0-1 Min: 0s bis < 60s
+    const range0to1 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 0 && d.returnTime < 60;
+    }).length;
 
-    // Berechne Quoten (kumulativ, lessThan20Min + greaterEqual20Min = 100%)
-    const percentLessThan2Min = total > 0 ? (lessThan2Min / total * 100) : 0;
-    const percentLessThan5Min = total > 0 ? (lessThan5Min / total * 100) : 0;
-    const percentLessThan10Min = total > 0 ? (lessThan10Min / total * 100) : 0;
-    const percentLessThan20Min = total > 0 ? (lessThan20Min / total * 100) : 0;
-    const percentGreaterEqual20Min = total > 0 ? (greaterEqual20Min / total * 100) : 0;
+    // 1-2 Min: 60s bis < 120s
+    const range1to2 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 60 && d.returnTime < 120;
+    }).length;
+
+    // 2-4 Min: 120s bis < 240s
+    const range2to4 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 120 && d.returnTime < 240;
+    }).length;
+
+    // 4-8 Min: 240s bis < 480s
+    const range4to8 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 240 && d.returnTime < 480;
+    }).length;
+
+    // 8-15 Min: 480s bis < 900s
+    const range8to15 = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 480 && d.returnTime < 900;
+    }).length;
+
+    // >= 15 Min: 900s und mehr
+    const range15plus = validReturnTimes.filter(function(d) {
+        return d.returnTime >= 900;
+    }).length;
+
+    // Berechne Quoten (diskret, Summe aller Kategorien = 100%)
+    const percentRange0to1 = total > 0 ? (range0to1 / total * 100) : 0;
+    const percentRange1to2 = total > 0 ? (range1to2 / total * 100) : 0;
+    const percentRange2to4 = total > 0 ? (range2to4 / total * 100) : 0;
+    const percentRange4to8 = total > 0 ? (range4to8 / total * 100) : 0;
+    const percentRange8to15 = total > 0 ? (range8to15 / total * 100) : 0;
+    const percentRange15plus = total > 0 ? (range15plus / total * 100) : 0;
 
     // Extrahiere Zeiten für statistische Berechnung
     const returnTimes = validReturnTimes.map(function(d) { return d.returnTime; });
@@ -516,16 +537,18 @@ function calculateReturnTimeKPIs(data) {
 
     return {
         total: total,
-        lessThan2Min: lessThan2Min,
-        lessThan5Min: lessThan5Min,
-        lessThan10Min: lessThan10Min,
-        lessThan20Min: lessThan20Min,
-        greaterEqual20Min: greaterEqual20Min,
-        percentLessThan2Min: percentLessThan2Min,
-        percentLessThan5Min: percentLessThan5Min,
-        percentLessThan10Min: percentLessThan10Min,
-        percentLessThan20Min: percentLessThan20Min,
-        percentGreaterEqual20Min: percentGreaterEqual20Min,
+        range0to1: range0to1,
+        range1to2: range1to2,
+        range2to4: range2to4,
+        range4to8: range4to8,
+        range8to15: range8to15,
+        range15plus: range15plus,
+        percentRange0to1: percentRange0to1,
+        percentRange1to2: percentRange1to2,
+        percentRange2to4: percentRange2to4,
+        percentRange4to8: percentRange4to8,
+        percentRange8to15: percentRange8to15,
+        percentRange15plus: percentRange15plus,
         mean: mean,
         median: median,
         percentile25: percentile25,
