@@ -1,8 +1,8 @@
 # RTW Hilfsfrist Dashboard - Production Documentation
 
-**Version:** 7.2 - Security Edition
+**Version:** 7.3 - Return Time Analysis Edition
 **Last Updated:** November 2025
-**Status:** Production Ready - Security Hardened
+**Status:** Production Ready - Security Hardened + Return Time KPI
 **Target Audience:** LLM-based Development, Human Developers, System Architects
 
 ---
@@ -38,10 +38,12 @@ The RTW Hilfsfrist Dashboard monitors and visualizes emergency response performa
 ### Core Functionality
 - **Real-time KPI monitoring** with traffic light alerts (🟢 🟡 🔴)
 - **Performance analytics** including 90th percentile calculations
+- **Return time analysis** with discrete time categories for data quality control (NEW in 7.3)
 - **Temporal analysis** via 24-hour heatmap visualization
 - **Interactive filtering** by time period, individual vehicles, and shift schedules
 - **Data export** capabilities for external analysis
 - **Detailed mission information** via clickable Event IDs with modal popup dialogs
+- **Return time histogram** with statistical overlays (mean, median, P25, P75) (NEW in 7.3)
 
 ### Technical Stack
 ```
@@ -241,16 +243,16 @@ The application logic has been separated by functional domain:
 |------|-------|----------------|-------------------|---------------|
 | **01-config.js** | ~40 | CONFIG object, API endpoints, thresholds, constants | Centralized config (no hardcoded values) | Config structure |
 | **02-state.js** | ~30 | Global state management, chart instances, data cache | Immutable state patterns | State management |
-| **03-calculations.js** | ~445 | KPI calculations, percentiles, threshold evaluations, **XSS protection** | **escapeHtml()** function | 13 functions (100%) |
-| **04-data.js** | ~259 | ArcGIS API integration, data fetching, **SQL injection protection** | **sanitizeForSQL()** function | 3 functions (100%) |
-| **05-ui-kpis.js** | ~182 | KPI card updates, traffic light logic, status rendering | DOM validation | 2 functions (100%) |
-| **06-ui-charts.js** | ~400 | Chart.js integration (line, bar, pie, heatmap charts) | Sanitized chart data | Chart rendering |
+| **03-calculations.js** | ~595 | KPI calculations, percentiles, threshold evaluations, **return time analysis**, **XSS protection** | **escapeHtml()** function | 15 functions (100%) |
+| **04-data.js** | ~265 | ArcGIS API integration, data fetching, **return time calculation**, **SQL injection protection** | **sanitizeForSQL()** function | 3 functions (100%) |
+| **05-ui-kpis.js** | ~222 | KPI card updates, traffic light logic, status rendering, **return time KPI** | DOM validation | 3 functions (100%) |
+| **06-ui-charts.js** | ~632 | Chart.js integration (line, bar, pie, heatmap, **return time histogram**) | Sanitized chart data | 5 chart functions (100%) |
 | **07-ui-table.js** | ~272 | Table rendering, sorting, pagination, export functions | **XSS protection in tables** | 3 functions (100%) |
 | **08-ui-modal.js** | ~269 | Event details modal, fetchEventDetails(), displayEventDetails() | **XSS protection in modal**, strict equality | 3 functions (100%) |
 | **09-ui-filters.js** | ~282 | Filter controls, RTW picker, shift selector, auto-refresh | Input validation | 6 functions (100%) |
 | **10-main.js** | ~296 | Initialization, event listeners, orchestration, init() | **Error handling**, esriRequest validation | 3 functions (100%) |
 
-**Total:** 2,475 lines across 10 modular JavaScript files
+**Total:** ~2,903 lines across 10 modular JavaScript files
 
 #### Security-Critical Modules Detail
 
@@ -263,7 +265,7 @@ escapeHtml(unsafe)
   - Protection: Escapes <, >, &, ", ' characters
   - Returns: Safe HTML string or 'N/A' for null values
 
-// BUSINESS LOGIC (13 functions total)
+// BUSINESS LOGIC (15 functions total)
 isHilfsfristRelevant(nameeventtype)
   - Purpose: Filters out non-relevant events (ending with '-NF')
   - Critical for: Accurate KPI calculations
@@ -273,6 +275,19 @@ calculatePercentile(values, percentile)
   - Purpose: Statistical calculation for 90th percentile KPIs
   - Algorithm: Nearest-rank method
   - Documented: Mathematical explanation in layman terms
+
+calculateReturnTimeKPIs(data)
+  - Purpose: Analyzes return times with discrete time categories
+  - Categories: 0-1, 1-2, 2-4, 4-8, 8-15, ≥15 minutes (non-overlapping)
+  - Returns: Count, percentage, mean, median, P25, P75 for each category
+  - Scope: ALL incidents (including non-Hilfsfrist-relevant)
+  - Use case: Data quality control and outlier detection
+
+calculateReturnTimeHistogramData(data)
+  - Purpose: Creates histogram bins for return time distribution
+  - Bins: 2-minute intervals (0-2, 2-4, ... >30 min)
+  - Returns: Labels and counts for Chart.js visualization
+  - Used by: updateReturnTimeHistogram() for chart rendering
 ```
 
 **js/04-data.js** - Data Layer & SQL Protection
@@ -287,9 +302,10 @@ sanitizeForSQL(value)
 // DATA PROCESSING (Lines 83-133)
 processData(rawResourceFeatures, rawEventFeatures)
   - Purpose: Joins and transforms raw API data
-  - Calculates: responseTime, travelTime, threshold compliance
+  - Calculates: responseTime, travelTime, returnTime, threshold compliance
   - Returns: Fully processed data with KPI flags
   - Security: All event data joined safely
+  - New in v7.3: returnTime = time_finished - time_finished_via_radio
 
 // API FETCHING (Lines 166-258)
 fetchData(options)
@@ -1110,6 +1126,7 @@ interface ProcessedEinsatz {
   // Computed Performance Metrics (in seconds)
   responseTime: number | null;      // time_on_the_way - time_alarm
   travelTime: number | null;        // time_arrived - time_on_the_way
+  returnTime: number | null;        // time_finished - time_finished_via_radio
 
   // Threshold Compliance (boolean)
   responseAchieved: boolean | null; // responseTime <= 90s
@@ -2059,6 +2076,20 @@ init();
 - **Measurement:** `responseAchieved && travelAchieved`
 - **Target:** 95% compliance (Hamburg Fire Department goal)
 
+**Return Time (Rückfahrtzeit):**
+- **No Threshold:** Quality indicator only
+- **Measurement:** `time_finished - time_finished_via_radio`
+- **Purpose:** Data quality control and outlier detection
+- **Scope:** ALL incidents (including non-Hilfsfrist-relevant)
+- **Categories (Discrete):**
+  - 🔴 0-1 Min: 0 to <60 seconds
+  - 🟠 1-2 Min: 60 to <120 seconds
+  - 🟡 2-4 Min: 120 to <240 seconds
+  - 🔵 4-8 Min: 240 to <480 seconds
+  - 🟣 8-15 Min: 480 to <900 seconds
+  - 🟢 ≥15 Min: 900+ seconds
+- **Note:** Categories are discrete (non-overlapping), sum = 100%
+
 ### Statistical Methods
 
 #### Percentile Calculation
@@ -2122,6 +2153,24 @@ travelValid.forEach(item => {
     else if (t <= 120) travelBins['1-2min']++;
     // ... etc
     else travelBins['>5min']++;
+});
+```
+
+**Return Time Bins (2-minute intervals):**
+```javascript
+const returnTimeBins = {
+    '0-2min': 0, '2-4min': 0, '4-6min': 0, '6-8min': 0,
+    '8-10min': 0, '10-12min': 0, '12-14min': 0, '14-16min': 0,
+    '16-18min': 0, '18-20min': 0, '20-22min': 0, '22-24min': 0,
+    '24-26min': 0, '26-28min': 0, '28-30min': 0, '>30min': 0
+};
+
+validReturnTimes.forEach(item => {
+    const minutes = item.returnTime / 60;
+    if (minutes < 2) returnTimeBins['0-2min']++;
+    else if (minutes < 4) returnTimeBins['2-4min']++;
+    // ... etc
+    else returnTimeBins['>30min']++;
 });
 ```
 
