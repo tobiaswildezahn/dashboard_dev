@@ -144,6 +144,9 @@
 .modal-title-main {
     font-size: 18px;
     font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .modal-title-sub {
@@ -151,6 +154,21 @@
     font-weight: 500;
     opacity: 0.9;
     margin-top: 4px;
+}
+
+.modal-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
 }
 
 /* Message Toast */

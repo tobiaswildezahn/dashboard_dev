@@ -42,11 +42,17 @@ async function openEventDetailsModal(eventId) {
     // SICHERHEIT: escapeHtml() verhindert XSS-Angriffe
     const funkrufname = escapeHtml(cachedItem ? cachedItem.call_sign : null);
     const einsatzstichwort = escapeHtml(cachedItem ? cachedItem.nameeventtype : null);
+    const resourceStatus = escapeHtml(cachedItem ? cachedItem.event_resources_status : null);
+
+    // Status-Badge HTML (falls vorhanden)
+    const statusBadgeHtml = resourceStatus
+        ? '<span class="modal-status-badge">' + resourceStatus + '</span>'
+        : '';
 
     // Titel sofort setzen für bessere UX
     modalTitle.innerHTML = '<span>🚨</span>' +
         '<div>' +
-        '<div class="modal-title-main">' + (funkrufname || 'Einsatz') + '</div>' +
+        '<div class="modal-title-main">' + (funkrufname || 'Einsatz') + statusBadgeHtml + '</div>' +
         '<div class="modal-title-sub">' + (einsatzstichwort || 'Wird geladen...') + '</div>' +
         '</div>';
 
@@ -209,10 +215,16 @@ function displayEventDetails(details) {
     // SICHERHEIT: escapeHtml() verhindert XSS-Angriffe
     const funkrufname = escapeHtml(resourceDetails ? resourceDetails.call_sign : null) || 'Unbekannt';
     const einsatzstichwort = escapeHtml(eventDetails ? eventDetails.nameeventtype : null) || 'Unbekannt';
+    const resourceStatus = escapeHtml(resourceDetails ? resourceDetails.event_resources_status : null);
+
+    // Status-Badge HTML (falls vorhanden)
+    const statusBadgeHtml = resourceStatus
+        ? '<span class="modal-status-badge">' + resourceStatus + '</span>'
+        : '';
 
     modalTitle.innerHTML = '<span>🚨</span>' +
         '<div>' +
-        '<div class="modal-title-main">' + funkrufname + '</div>' +
+        '<div class="modal-title-main">' + funkrufname + statusBadgeHtml + '</div>' +
         '<div class="modal-title-sub">' + einsatzstichwort + '</div>' +
         '</div>';
 
