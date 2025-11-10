@@ -202,6 +202,7 @@ function processData(rawResourceFeatures, rawEventFeatures) {
 
         return {
             call_sign: attrs.call_sign,
+            event_resources_status: attrs.event_resources_status,
             idevent: attrs.idevent,
             time_alarm: attrs.time_alarm,
             time_on_the_way: attrs.time_on_the_way,

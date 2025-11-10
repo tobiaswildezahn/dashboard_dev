@@ -1,8 +1,8 @@
 # RTW Hilfsfrist Dashboard - Production Documentation
 
-**Version:** 7.3 - Return Time Analysis Edition
+**Version:** 7.4 - Event Status Badge Edition
 **Last Updated:** November 2025
-**Status:** Production Ready - Security Hardened + Return Time KPI
+**Status:** Production Ready - Security Hardened + Return Time KPI + Status Badge
 **Target Audience:** LLM-based Development, Human Developers, System Architects
 
 ---
@@ -42,7 +42,7 @@ The RTW Hilfsfrist Dashboard monitors and visualizes emergency response performa
 - **Temporal analysis** via 24-hour heatmap visualization
 - **Interactive filtering** by time period, individual vehicles, and shift schedules
 - **Data export** capabilities for external analysis
-- **Detailed mission information** via clickable Event IDs with modal popup dialogs
+- **Detailed mission information** via clickable Event IDs with modal popup dialogs including event resource status badge (NEW in 7.4)
 - **Return time histogram** with statistical overlays (mean, median, P25, P75) (NEW in 7.3)
 
 ### Technical Stack
@@ -213,7 +213,7 @@ The stylesheet has been decomposed into a layered cascade:
 | **05-kpi-cards.css** | ~180 | KPI cards, traffic lights, status badges |
 | **06-charts.css** | ~90 | Chart containers, canvas styling, grid layout |
 | **07-table.css** | ~140 | Data table, sortable headers, row interactions |
-| **08-modal.css** | ~110 | Event details modal, overlay, animations |
+| **08-modal.css** | ~226 | Event details modal, overlay, animations, status badge styling |
 | **09-responsive.css** | ~70 | Media queries, mobile adaptations |
 
 **Load Order:**
@@ -244,15 +244,15 @@ The application logic has been separated by functional domain:
 | **01-config.js** | ~40 | CONFIG object, API endpoints, thresholds, constants | Centralized config (no hardcoded values) | Config structure |
 | **02-state.js** | ~30 | Global state management, chart instances, data cache | Immutable state patterns | State management |
 | **03-calculations.js** | ~595 | KPI calculations, percentiles, threshold evaluations, **return time analysis**, **XSS protection** | **escapeHtml()** function | 15 functions (100%) |
-| **04-data.js** | ~265 | ArcGIS API integration, data fetching, **return time calculation**, **SQL injection protection** | **sanitizeForSQL()** function | 3 functions (100%) |
+| **04-data.js** | ~346 | ArcGIS API integration, data fetching, **return time calculation**, **event_resources_status extraction**, **SQL injection protection** | **sanitizeForSQL()** function | 3 functions (100%) |
 | **05-ui-kpis.js** | ~222 | KPI card updates, traffic light logic, status rendering, **return time KPI** | DOM validation | 3 functions (100%) |
 | **06-ui-charts.js** | ~632 | Chart.js integration (line, bar, pie, heatmap, **return time histogram**) | Sanitized chart data | 5 chart functions (100%) |
 | **07-ui-table.js** | ~272 | Table rendering, sorting, pagination, export functions | **XSS protection in tables** | 3 functions (100%) |
-| **08-ui-modal.js** | ~269 | Event details modal, fetchEventDetails(), displayEventDetails() | **XSS protection in modal**, strict equality | 3 functions (100%) |
+| **08-ui-modal.js** | ~331 | Event details modal, fetchEventDetails(), displayEventDetails(), **status badge rendering** | **XSS protection in modal**, strict equality | 3 functions (100%) |
 | **09-ui-filters.js** | ~282 | Filter controls, RTW picker, shift selector, auto-refresh | Input validation | 6 functions (100%) |
 | **10-main.js** | ~296 | Initialization, event listeners, orchestration, init() | **Error handling**, esriRequest validation | 3 functions (100%) |
 
-**Total:** ~2,903 lines across 10 modular JavaScript files
+**Total:** ~2,947 lines across 10 modular JavaScript files
 
 #### Security-Critical Modules Detail
 
@@ -1038,6 +1038,7 @@ Every complex function includes:
   "call_sign": String,             // RTW identifier (e.g., "12-RTWA")
   "nameresourcetype": String,      // Resource type (Filter: "RTW")
   "idevent": Number,               // Foreign key to Einsätze table
+  "event_resources_status": String, // Current resource status (e.g., "Einsatz", "Verfügbar")
 
   // Temporal Data (Unix timestamps in milliseconds)
   "time_alarm": Number,            // Timestamp: Alarm received
@@ -1063,6 +1064,7 @@ Every complex function includes:
         "call_sign": "RTW 12/83-01",
         "nameresourcetype": "RTW",
         "idevent": 789,
+        "event_resources_status": "Einsatz",
         "time_alarm": 1699372800000,
         "time_on_the_way": 1699372845000,
         "time_arrived": 1699373100000,
@@ -1113,6 +1115,7 @@ interface ProcessedEinsatz {
   // Original fields from Einsatzresourcen
   OBJECTID: number;
   call_sign: string;
+  event_resources_status: string;     // Current resource status
   nameresourcetype: string;
   idevent: number;
   time_alarm: number;
@@ -2236,7 +2239,10 @@ const percentages = hourlyData.map(h =>
             <div class="modal-title">
                 <span>🚨</span>
                 <div>
-                    <div class="modal-title-main">RTW 12/83-01</div>
+                    <div class="modal-title-main">
+                        RTW 12/83-01
+                        <span class="modal-status-badge">EINSATZ</span>
+                    </div>
                     <div class="modal-title-sub">NOTF</div>
                 </div>
             </div>
@@ -2252,8 +2258,9 @@ const percentages = hourlyData.map(h =>
 #### Displayed Information
 
 **Dynamic Title:**
-- **Main:** Funkrufname (call_sign from Einsatzresourcen)
+- **Main:** Funkrufname (call_sign from Einsatzresourcen) + Status-Badge (event_resources_status)
 - **Sub:** Einsatzstichwort (nameeventtype from Einsätze)
+- **Status Badge:** Displayed next to call_sign in a translucent box (NEW in 7.4)
 
 **Modal Body (5 fields):**
 
@@ -2337,6 +2344,7 @@ async function fetchEventDetails(eventId) {
 **Typography:**
 - Modal title main: 18px, 700 weight
 - Modal title sub: 13px, 500 weight
+- Status badge: 11px, 600 weight, uppercase, 0.5px letter-spacing
 - Detail labels: 11px, 600 weight, uppercase
 - Detail values: 15px, 500 weight
 
@@ -2344,6 +2352,32 @@ async function fetchEventDetails(eventId) {
 - Modal padding: 24px
 - Field margin: 16px
 - 2-column grid gap: 16px
+- Status badge gap: 10px
+
+**Status Badge Styling (NEW in 7.4):**
+```css
+.modal-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+```
+
+**Status Badge Features:**
+- ✅ Translucent background blends with modal header gradient
+- ✅ Only displays when event_resources_status has value
+- ✅ XSS-protected via escapeHtml() function
+- ✅ Flexbox layout ensures proper alignment next to call_sign
+- ✅ Uppercase transformation for consistent visual appearance
 
 **Animations:**
 - Overlay: `fadeIn` (0.2s ease)
@@ -2412,12 +2446,15 @@ Original implementation only stored `nameeventtype`. Extended to include all eve
 
 ```javascript
 return {
+    call_sign: attrs.call_sign,
+    event_resources_status: attrs.event_resources_status,  // ← NEW: Resource status (7.4)
     ...attrs,                    // All resource fields
     nameeventtype,              // Event type (backwards compatible)
     eventData: eventData,       // ← NEW: Complete event object
     isHilfsfristRelevant: isHilfsfristRelevant(nameeventtype),
     responseTime,
     travelTime,
+    returnTime,                 // ← NEW: Return time analysis (7.3)
     responseAchieved,
     travelAchieved,
     hilfsfristAchieved
@@ -3209,6 +3246,75 @@ After any code changes, re-run:
 - **Hamburg Fire Department:** https://www.hamburg.de/feuerwehr/
 
 ### Version History
+
+**Version 7.4 - Event Status Badge Edition (November 2025):**
+
+**New Features:**
+- ✅ **Event Resource Status Badge in Modal:**
+  - Added `event_resources_status` field extraction from Einsatzresourcen layer
+  - Displayed in modal title next to call_sign in translucent badge
+  - XSS-protected via escapeHtml() function
+  - Conditional rendering (only shows when status field has value)
+  - Flexbox layout for proper alignment
+
+**Files Modified:** 3 files
+- `js/04-data.js`: Added event_resources_status to processData return object (+1 field)
+- `js/08-ui-modal.js`: Implemented status badge rendering in both openEventDetailsModal and displayEventDetails (+24 lines)
+- `css/08-modal.css`: Added .modal-status-badge styling with translucent design (+17 lines)
+
+**Visual Enhancements:**
+- Translucent badge background (rgba(255, 255, 255, 0.25))
+- Border for better visibility on gradient background
+- Uppercase text transformation with letter-spacing
+- Seamless integration with modal header design
+
+**Lines Changed:** +42 lines
+**Security:** XSS protection maintained via escapeHtml()
+
+---
+
+**Version 7.3 - Return Time Analysis Edition (November 2025):**
+
+**New Features:**
+- ✅ **Return Time Analysis Module:**
+  - Calculate return time: `time_finished - time_finished_via_radio`
+  - Discrete time categories: 0-1, 1-2, 2-4, 4-8, 8-15, ≥15 minutes (non-overlapping)
+  - Statistical metrics: Mean, Median, P25, P75 with 1 decimal place
+  - Applied to ALL incidents (not just Hilfsfrist-relevant)
+  - Data quality control and outlier detection
+
+- ✅ **Return Time KPI Card:**
+  - Total count with valid return times
+  - Mean and median (X.X min format)
+  - 6 discrete category distributions (Percentage first, then absolute count)
+  - Emoji indicators for visual categorization
+
+- ✅ **Return Time Histogram:**
+  - 2-minute interval bins (0-2, 2-4, ... >30 min)
+  - Statistical overlays: mean, median, P25, P75 in subtitle
+  - Chart.js bar chart with purple color scheme
+  - 360px height for optimal visibility
+
+**Files Modified:** 7 files
+- `js/04-data.js`: Added returnTime calculation in processData (+3 lines)
+- `js/03-calculations.js`: Added calculateReturnTimeKPIs() and calculateReturnTimeHistogramData() (+150 lines)
+- `js/05-ui-kpis.js`: Added updateReturnTimeKPI() function (+60 lines)
+- `js/06-ui-charts.js`: Added updateReturnTimeHistogram() with Chart.js (+200 lines)
+- `js/02-state.js`: Added returnTimeChart state (+1 line)
+- `js/10-main.js`: Integrated updateReturnTimeKPI() into updateDashboard() (+1 line)
+- `index.html`: Added KPI card and histogram canvas (+75 lines)
+- `DOCUMENTATION.md`: Complete documentation update (+80 lines)
+
+**Documentation Updates:**
+- Data model extended with returnTime field
+- Return Time section added to Performance Metrics
+- Statistical methods documented (discrete bins vs cumulative)
+- Module statistics updated (line counts, function counts)
+
+**Lines Changed:** +570 lines (implementation + documentation)
+**Use Case:** Identify data quality issues, detect suspicious patterns, peer comparison
+
+---
 
 **Version 7.2 - Security Edition (November 2025):**
 
