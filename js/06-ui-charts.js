@@ -57,6 +57,19 @@ function updateLineChart(data) {
         return stats.total > 0 ? (stats.travelAchieved / stats.total * 100) : 0;
     });
 
+    // Absolute Zahlen für Tooltip
+    const hilfsfristCounts = sortedHours.map(function(h) {
+        return { achieved: hourlyStats[h].hilfsfristAchieved, total: hourlyStats[h].total };
+    });
+
+    const responseCounts = sortedHours.map(function(h) {
+        return { achieved: hourlyStats[h].responseAchieved, total: hourlyStats[h].total };
+    });
+
+    const travelCounts = sortedHours.map(function(h) {
+        return { achieved: hourlyStats[h].travelAchieved, total: hourlyStats[h].total };
+    });
+
     if (state.lineChart) {
         state.lineChart.destroy();
     }
@@ -70,6 +83,7 @@ function updateLineChart(data) {
                 {
                     label: 'Hilfsfrist (Gesamt)',
                     data: hilfsfristPercentages,
+                    counts: hilfsfristCounts,
                     borderColor: 'rgb(200, 16, 46)',
                     backgroundColor: 'rgba(200, 16, 46, 0.1)',
                     borderWidth: 3,
@@ -85,6 +99,7 @@ function updateLineChart(data) {
                 {
                     label: 'Ausrückezeit',
                     data: responsePercentages,
+                    counts: responseCounts,
                     borderColor: 'rgb(59, 130, 246)',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     borderWidth: 2,
@@ -100,6 +115,7 @@ function updateLineChart(data) {
                 {
                     label: 'Anfahrtszeit',
                     data: travelPercentages,
+                    counts: travelCounts,
                     borderColor: 'rgb(245, 158, 11)',
                     backgroundColor: 'rgba(245, 158, 11, 0.1)',
                     borderWidth: 2,
@@ -164,7 +180,11 @@ function updateLineChart(data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
+                            const percentage = context.parsed.y.toFixed(1) + '%';
+                            const counts = context.dataset.counts[context.dataIndex];
+                            const achieved = counts.achieved;
+                            const total = counts.total;
+                            return context.dataset.label + ': ' + percentage + ' (' + achieved + '/' + total + ')';
                         }
                     }
                 }
